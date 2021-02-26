@@ -1,0 +1,123 @@
+/**
+ * JavaCC template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
+ */options{  static = true;}PARSER_BEGIN(JavaCodeSmellsDetector)
+package jcc;
+
+import java.io.*;
+
+public class JavaCodeSmellsDetector{  public static void main(String args []) throws ParseException  {
+    try
+    {
+      FileInputStream file = new FileInputStream("TargetClass.java");
+      JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
+      //detector.start();
+	}
+    catch (Exception e)
+    {
+      System.out.println("Oops.");
+      System.out.println(e.getMessage());
+    }  }}PARSER_END(JavaCodeSmellsDetector)
+TOKEN_MGR_DECLS :
+{}
+
+SKIP :
+{
+  <SPACE: [" ", "\t", "\f"]>
+| <WINDOWS_EOL : "\r\n">
+| <UNIX_EOL: "\n">
+| <OLD_MAC_EOL: "\r">
+| < "//" > : IN_COMMENTO_SINGLE_LINE
+| < "/*" > : IN_COMMENTO_MULTI_LINE
+//| < "@" < IDENTIFIER >> : ANNOTATION
+}
+
+< IN_COMMENTO_SINGLE_LINE >
+SKIP :
+{
+  < "\n" | "\r\n" > : DEFAULT
+| < ~[ ] >
+}
+
+< IN_COMMENTO_MULTI_LINE >
+SKIP :
+{
+  < "*/" > : DEFAULT
+| < ~[ ] >
+}
+
+< ANNOTATION >
+SKIP :
+{
+  < "\n" | "\r\n" > : DEFAULT
+| < ~[ ] >
+}
+
+/* RESERVED WORDS*/
+
+TOKEN :
+{
+  < ABSTRACT: "abstract" >
+| < ASSERT: "assert" >
+| < BOOLEAN: "boolean" >
+| < BREAK: "break" >
+| < BYTE: "byte" >
+| < CASE: "case" >
+| < CATCH: "catch" >
+| < CHAR: "char" >
+| < CLASS: "class" >
+| < CONST: "const" >
+| < CONTINUE: "continue" >
+| < _DEFAULT: "default" >
+| < DO: "do" >
+| < DOUBLE: "double" >
+| < ELSE: "else" >
+| < ENUM: "enum" >
+| < EXTENDS: "extends" >
+| < FALSE: "false" >
+| < FINAL: "final" >
+| < FINALLY: "finally" >
+| < FLOAT: "float" >
+| < FOR: "for" >
+| < GOTO: "goto" >
+| < IF: "if" >
+| < IMPLEMENTS: "implements" >
+| < IMPORT: "import" >
+| < INSTANCEOF: "instanceof" >
+| < INT: "int" >
+| < INTERFACE: "interface" >
+| < LONG: "long" >
+| < NATIVE: "native" >
+| < NEW: "new" >
+| < NULL: "null" >
+| < PACKAGE: "package">
+| < PRIVATE: "private" >
+| < PROTECTED: "protected" >
+| < PUBLIC: "public" >
+| < RETURN: "return" >
+| < SHORT: "short" >
+| < STATIC: "static" >
+| < STRICTFP: "strictfp" >
+| < SUPER: "super" >
+| < SWITCH: "switch" >
+| < SYNCHRONIZED: "synchronized" >
+| < THIS: "this" >
+| < THROW: "throw" >
+| < THROWS: "throws" >
+| < TRANSIENT: "transient" >
+| < TRUE: "true" >
+| < TRY: "try" >
+| < VOID: "void" >
+| < VOLATILE: "volatile" >
+| < WHILE: "while" >
+//| < YIELD: "yield" > {if(!yieldSupported)matchedToken.kind=IDENTIFIER;}
+| < REQUIRES: "requires" >
+| < TO: "to" >
+| < WITH: "with" >
+| < OPEN: "open" >
+| < OPENS: "opens" >
+| < USES: "uses" >
+| < MODULE: "module" >
+| < EXPORTS: "exports" >
+| < PROVIDES: "provides" >
+| < TRANSITIVE: "transitive" >
+}
