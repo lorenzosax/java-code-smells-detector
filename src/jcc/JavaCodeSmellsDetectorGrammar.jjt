@@ -266,12 +266,6 @@ void typeImportOnDemandDeclaration() :
   < IMPORT > <DOT> < SEMIC >
 }
 
-void typeDeclarations() :
-{}
-{
- < ID >
-}
-
 void superConstruct():
 {}
 {
@@ -279,10 +273,11 @@ void superConstruct():
 }
 
 void interfaces():
-{ }
+{}
 {
   < IMPLEMENTS > interfaceTypeList()
 }
+
 void interfaceTypeList():
 {}
 {
@@ -317,18 +312,6 @@ void classModifier() :
 {}
 {
   < PUBLIC > | < ABSTRACT > | < FINAL >
-}
-
-void interfaces() :
-{}
-{
-  < IMPLEMENTS > interfaceTypeList()
-}
-
-void interfaceTypeList() :
-{}
-{
-  interfaceType() | interfaceTypeList() < COMMA > interfaceType()
 }
 
 void classBody() :
@@ -589,12 +572,6 @@ void variableInitializers() :
   variableInitializer() | variableInitializers() < COMMA > variableInitializer()
 }
 
-void variableInitializer() :
-{}
-{
-  expression() | arrayInitializer()
-}
-
 void type() :
 {}
 {
@@ -727,12 +704,6 @@ void emptyStatement():
 {}
 {
 	< SEMIC >
-}
-
-void emptyStatement():
-{}
-{
-	< ID > <DPOINTS > statement()
 }
 
 void labeledStatement():
@@ -1082,12 +1053,6 @@ void methodInvocation() :
 {}
 {
 	methodName() <PARTA> (argumentList())? <PARTC> | primary() <DOT> <ID> <PARTA> (argumentList())? <PARTC> | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC>
-}
-
-void fieldAccess() :
-{}
-{
-	primary() <DOT> <ID> | <SUPER> <DOT> <ID>
 }
 
 void fieldAccess() :
