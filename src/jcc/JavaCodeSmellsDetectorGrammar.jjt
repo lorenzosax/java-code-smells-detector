@@ -125,7 +125,6 @@ TOKEN :
 | < VOID: "void" >
 | < VOLATILE: "volatile" >
 | < WHILE: "while" >
-//| < YIELD: "yield" > {if(!yieldSupported)matchedToken.kind=IDENTIFIER;}
 | < REQUIRES: "requires" >
 | < TO: "to" >
 | < WITH: "with" >
@@ -141,7 +140,7 @@ TOKEN :
 TOKEN : /* NUMBERS */
 {
   < #DIGIT : [ "0"-"9" ] >
-| < #DIGITS : (< DIGIT >)+ >
+| < DIGITS : (< DIGIT >)+ >
 | < #OPT_FRANCTION : ("." < DIGITS >)? >
 | < #OPT_EXPONENT :
     (
@@ -158,9 +157,10 @@ TOKEN : /* NUMBERS */
 TOKEN :
 {
 	< LITERAL : "\"" (~["\n","\r"])* "\"" >
+	| < INPUT_CHAR : (~["\n","\r", "\"", "\'", "\\"]) >
 }
 
-TOKEN : /* IDENTIFIERS*/
+TOKEN : /* IDS*/
 {
   < ID :
     [ "A"-"Z", "a"-"z", "_" ]
@@ -181,6 +181,38 @@ TOKEN : /* PUNCTUATION SIMBOLS */
 | < SEMIC : ";" >
 | < COMMA : "," >
 | < DOT : "." >
+}
+
+TOKEN :
+{
+  < QMARK : "?" >
+  | < DPOINTS: ":" >
+  | < APEX: "'" >
+  | < DAPEX: [ "\"" ] >
+  | < EXP: [ "^" ] >
+  | < PLUS : "+" >
+  | < MINUS : "-" >
+  | < ASS : "=" >
+  | < MUL : "*" >
+  | < DIV : "/" >
+  | < MOD : "%" >
+  | < MULASS : "*=" >
+  | < DIVASS : "/=" >
+  | < MODASS : "%=" >
+  | < ADDASS : "+=" >
+  | < SUBASS : "-=" >
+  | < ANDASS : "&=" >
+  | < ORASS : "|=" >
+  | < MINEQ : "<=" >
+  | < EQUAL : "==" >
+  | < MAJEQ : ">=" >
+  | < NOTEQ : "!=" >
+  | < MAJOR : ">" >
+  | < MINOR : "<" >
+  | < NOT : "!" >
+  | < TILDE : "~" >
+  | < AND : "&" >
+  | < OR : "|" >
 }
 
 SimpleNode compilationUnit() :
@@ -207,7 +239,7 @@ void packageName() :
 void packageName1() :
 {}
 {
-  "." < ID > packageName1() | {}
+  <DOT> < ID > packageName1() | {}
 }
 
 void importDeclarations() :
@@ -231,7 +263,7 @@ void singleTypeImportDeclaration() :
 void typeImportOnDemandDeclaration() :
 {}
 {
-  < IMPORT > "." < SEMIC >
+  < IMPORT > <DOT> < SEMIC >
 }
 
 void typeDeclarations() :
@@ -240,10 +272,10 @@ void typeDeclarations() :
  < ID >
 }
 
-void super():
+void superConstruct():
 {}
 {
-  < EXTENDS > classtype()
+  < EXTENDS > classType()
 }
 
 void interfaces():
@@ -254,5 +286,1096 @@ void interfaces():
 void interfaceTypeList():
 {}
 {
-  interfaceType() | interfaceTypeList < COMMA > interfaceType()
+  interfaceType() | interfaceTypeList() < COMMA > interfaceType()
 }
+
+void typeDeclarations() :
+{}
+{
+  typeDeclaration() | typeDeclarations() typeDeclaration()
+}
+
+void typeDeclaration() :
+{}
+{
+  classDeclaration() | interfaceDeclaration() | < SEMIC >
+}
+
+void classDeclaration() :
+{}
+{
+  (classModifiers())? < CLASS > < ID > (superConstruct())? (interfaces())? classBody()
+}
+
+void classModifiers() :
+{}
+{
+  classModifier() | classModifiers() classModifier()
+}
+
+void classModifier() :
+{}
+{
+  < PUBLIC > | < ABSTRACT > | < FINAL >
+}
+
+void interfaces() :
+{}
+{
+  < IMPLEMENTS > interfaceTypeList()
+}
+
+void interfaceTypeList() :
+{}
+{
+  interfaceType() | interfaceTypeList() < COMMA > interfaceType()
+}
+
+void classBody() :
+{}
+{
+  < PARGA > (classBodyDeclarations())? < PARGC >
+}
+
+void classBodyDeclarations() :
+{}
+{
+  classBodyDeclaration() | classBodyDeclarations() classBodyDeclaration()
+}
+
+void classBodyDeclaration() :
+{}
+{
+  classMemberDeclaration() | staticInitializer() | constructorDeclaration()
+}
+
+void classMemberDeclaration() :
+{}
+{
+  fieldDeclaration() | methodDeclaration()
+}
+
+void staticInitializer() :
+{}
+{
+  < STATIC > block()
+}
+
+void constructorDeclaration() :
+{}
+{
+  (constructorModifiers())? constructorDeclarator() (throwsConstruct())? constructorBody()
+}
+
+void constructorModifiers() :
+{}
+{
+  constructorModifier() | constructorModifiers() constructorModifier()
+}
+
+void constructorModifier() :
+{}
+{
+  < PUBLIC > < PROTECTED > < PRIVATE >
+}
+
+void constructorDeclarator():
+{}
+{
+  simpleTypeName() (formalParameterList())?
+}
+
+void formalParameterList() :
+{}
+{
+  formalParameter() | formalParameterList() < COMMA > formalParameter()
+}
+
+void formalParameter() :
+{}
+{
+  type() variableDeclaratorId()
+}
+
+void throwsConstruct() :
+{}
+{
+  < THROWS > classTypeList()
+}
+
+void classTypeList() :
+{}
+{
+  classType() | classTypeList() < COMMA > classType()  
+}
+
+void constructorBody() :
+{}
+{
+  < PARGA > (explicitConstructorInvocation())? (blockStatements())?
+}
+
+void explicitConstructorInvocation() :
+{}
+{
+  < THIS > (argumentList())? | < SUPER > (argumentList())?
+}
+
+void fieldDeclaration() :
+{}
+{
+  (fieldModifiers())? type() variableDeclarators() < SEMIC >
+}
+
+void fieldModifiers() :
+{}
+{
+  fieldModifier() | fieldModifiers() fieldModifier()
+}
+
+void fieldModifier() :
+{}
+{
+  < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < FINAL > | < TRANSIENT > | < VOLATILE >
+}
+
+void variableDeclarators() :
+{}
+{
+  variableDeclarator() | variableDeclarators() < COMMA > variableDeclarator()
+}
+
+void variableDeclarator() :
+{}
+{
+  variableDeclaratorId() | variableDeclaratorId() < ASS > variableInitializer()
+}
+
+void variableDeclaratorId() :
+{}
+{
+  < ID > | variableDeclaratorId() < PARQA > < PARQC > 
+}
+
+void variableInitializer() :
+{}
+{
+  expression() | arrayInitializer()
+}
+
+void methodDeclaration() :
+{}
+{
+  methodHeader() methodBody()
+}
+
+void methodHeader() :
+{}
+{
+  (methodModifiers())? resultType() methodDeclarator() (throwsConstruct())?
+}
+
+void resultType() :
+{}
+{
+  type() | < VOID >
+}
+
+void methodModifiers() :
+{}
+{
+  methodModifier() | methodModifiers() methodModifier()
+}
+
+void methodModifier() :
+{}
+{
+  < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < ABSTRACT > | < FINAL > | < SYNCHRONIZED > | < NATIVE >
+}
+
+void methodDeclarator() :
+{}
+{
+  < ID > < PARTA > (formalParameterList())? < PARTC > 
+}
+
+void methodBody() :
+{}
+{
+  block() | < SEMIC >
+}
+
+void interfaceDeclaration() :
+{}
+{
+  (interfaceModifiers())? < INTERFACE > < ID > (extendsInterfaces())? interfaceBody()
+}
+
+void interfaceModifiers() :
+{}
+{
+  interfaceModifier() | interfaceModifiers() interfaceModifier()
+}
+
+void interfaceModifier() :
+{}
+{
+  < PUBLIC > | < ABSTRACT >
+}
+
+void extendsInterfaces() :
+{}
+{
+  < EXTENDS > interfaceType() | extendsInterfaces() < COMMA > interfaceType()
+}
+
+void interfaceBody() :
+{}
+{
+  < PARGA > (interfaceMemberDeclarations())? < PARGC >
+}
+
+void interfaceMemberDeclarations() :
+{}
+{
+  interfaceMemberDeclaration() | interfaceMemberDeclarations() interfaceMemberDeclaration()
+}
+
+void interfaceMemberDeclaration() :
+{}
+{
+  constantDeclaration() | abstractMethodDeclaration()
+}
+
+void constantDeclaration() :
+{}
+{
+  constantModifiers() type() variableDeclarator()
+}
+
+void constantModifiers() :
+{}
+{
+  < PUBLIC > | < STATIC > | < FINAL >
+}
+
+void abstractMethodDeclaration() :
+{}
+{
+  (abstractMethodModifiers())? resultType() methodDeclarator() (throwsConstruct())? < SEMIC >
+}
+
+void abstractMethodModifiers() :
+{}
+{
+  abstractMethodModifier() | abstractMethodModifiers() abstractMethodModifier()
+}
+
+void abstractMethodModifier() :
+{}
+{
+  < PUBLIC > | < ABSTRACT >
+}
+
+void arrayInitializer() :
+{}
+{
+  < PARGA > (variableInitializers())? (< COMMA >)? < PARGC >
+}
+
+void variableInitializers() :
+{}
+{
+  variableInitializer() | variableInitializers() < COMMA > variableInitializer()
+}
+
+void variableInitializer() :
+{}
+{
+  expression() | arrayInitializer()
+}
+
+void type() :
+{}
+{
+primitiveType() | referenceType()
+}
+
+void primitiveType() :
+{}
+{
+ numericType() | < BOOLEAN >
+}
+
+void numericType():
+{}
+{
+  integralType() | floatingPointType()
+}
+
+void integralType():
+{}
+{
+  < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR >
+}
+  
+void floatingPointType():
+{}
+{
+  < FLOAT > | < DOUBLE > 
+}
+
+void referenceType():
+{}
+{
+  classOrInterfaceType() | arrayType()
+}
+
+void classOrInterfaceType():
+{}
+{
+  classType() | interfaceType()
+}
+
+void classType():
+{}
+{
+  typeName()
+}
+
+void interfaceType():
+{}
+{
+  typeName()
+}
+
+void arrayType():
+{}
+{
+  type() < PARQA > < PARQC >
+}
+
+void block():
+{}
+{
+  < PARGA > (blockStatements())? < PARGC >
+}
+
+void blockStatements():
+{}
+{
+  blockStatement() | blockStatements() blockStatement()
+}
+
+void blockStatement():
+{}
+{
+	localVariableDeclarationStatement() | statement()
+}
+
+void localVariableDeclarationStatement():
+{}
+{
+	localVariableDeclaration() < SEMIC >
+}
+
+void localVariableDeclaration():
+{}
+{
+	type() variableDeclarators()
+}
+
+
+void statement():
+{}
+{
+	statementWithoutTrailingSubstatement()
+	| labeledStatement()
+	| ifThenStatement()
+	| ifThenElseStatement()
+	| whileStatement()
+	| forStatement() 
+}
+
+void statementNoShortIf():
+{}
+{
+	statementWithoutTrailingSubstatement()
+	| labeledStatementNoShortIf()
+	| ifThenElseStatementNoShortIf()
+	| whileStatementNoShortIf()
+	| forStatementNoShortIf() 
+}
+
+void statementWithoutTrailingSubstatement():
+{}
+{
+	block()
+	| emptyStatement()
+	| expressionStatement()
+	| switchStatement()
+	| doStatement()
+	| breakStatement()
+	| continueStatement()
+	| returnStatement()
+	| synchronizedStatement()
+	| throwsStatement()
+	| tryStatement()
+}
+
+void emptyStatement():
+{}
+{
+	< SEMIC >
+}
+
+void emptyStatement():
+{}
+{
+	< ID > <DPOINTS > statement()
+}
+
+void labeledStatement():
+{}
+{
+	< ID > <DPOINTS > statement()
+}
+
+void labeledStatementNoShortIf():
+{}
+{
+	< ID > <DPOINTS > statementNoShortIf()
+}
+
+void expressionStatement():
+{}
+{
+	statementExpression() < SEMIC >
+}
+
+void statementExpression():
+{}
+{
+	assignment()
+	| preincrementExpression()
+	| postincrementExpression()
+	| predecrementExpression()
+	| postdecrementExpression()
+	| methodInvocation()
+	| classInstanceCreationExpression()
+}
+
+void ifThenStatement():
+{}
+{
+	< IF > < PARTA > expression() < PARTC > statement()
+}
+
+void ifThenElseStatement():
+{}
+{
+	< IF > < PARTA > expression() < PARTC > statementNoShortIf() < ELSE > statement()
+}
+
+void ifThenElseStatementNoShortIf():
+{}
+{
+	< IF > < PARTA > expression() < PARTC > statementNoShortIf() < ELSE > statementNoShortIf()
+}
+
+void switchStatement():
+{}
+{
+	< SWITCH > < PARTA > expression() < PARTC > switchBlock()
+}
+
+void switchBlock():
+{}
+{
+	< PARGA > (switchBlockStatementGroups())? (switchLabels())? < PARGC > 
+}
+
+void switchBlockStatementGroups():
+{}
+{
+	switchBlockStatementGroup()
+	| switchBlockStatementGroups()
+	| switchBlockStatementGroup()
+}
+
+void switchBlockStatementGroup():
+{}
+{
+	switchLabels() blockStatements()
+}
+
+void switchLabels():
+{}
+{
+	switchLabel()
+	| switchLabels() switchLabel()
+}
+
+void switchLabel(): 
+{}
+{
+  < CASE > constantExpression() < DPOINTS >
+|  < _DEFAULT > < DPOINTS >
+}
+
+void whileStatement():
+{}
+{
+  < WHILE > <PARTA > expression() < PARTC > statement() 
+}
+
+void whileStatementNoShortIf():
+{}
+{
+  < WHILE > <PARTA > expression() < PARTC > statementNoShortIf() 
+}
+
+
+void doStatement():
+{}
+{
+  < DO > statement() < WHILE > <PARTA > expression() < PARTC > < SEMIC >
+}
+
+void forStatement():
+{}
+{
+  < FOR > <PARTA > (forInit())? < SEMIC > (expression())?  < SEMIC > (forUpdate())? < PARTC > statement() 
+}
+
+void forStatementNoShortIf():
+{}
+{
+  < FOR > <PARTA > (forInit())? < SEMIC > (expression())?  < SEMIC > (forUpdate())? < PARTC > statementNoShortIf() 
+}
+
+void forInit():
+{}
+{
+  	statementExpressionList()
+	| localVariableDeclaration()	 
+}
+
+void forUpdate():
+{}
+{
+  	statementExpressionList() 
+}
+
+void statementExpressionList():
+{}
+{
+  	statementExpression()
+	| statementExpressionList()	< COMMA > statementExpression()
+}
+
+void breakStatement():
+{}
+{
+  < BREAK > (< ID >)? < SEMIC >
+}
+
+void continueStatement():
+{}
+{
+  < CONTINUE > (< ID >)? < SEMIC >
+}
+void returnStatement():
+{}
+{
+  < RETURN > (expression())? < SEMIC >
+}
+
+void throwsStatement():
+{}
+{
+  < THROW > (expression())? < SEMIC >
+}
+
+void synchronizedStatement():
+{}
+{
+  < SYNCHRONIZED > < PARTA > expression() < PARTC > block()
+}
+
+void tryStatement():
+{}
+{
+  	< TRY > block() catches()
+	| < TRY > block() (catches())? finallys()
+}
+
+void catches():
+{}
+{
+  	catchClause() | catches() catchClause()
+}
+
+void catchClause():
+{}
+{
+  	< CATCH > <PARTA> formalParameter() < PARTC > block()
+}
+
+void finallys():
+{}
+{
+	< FINALLY > block()
+}
+
+void constantExpression() :
+{}
+{
+	expression()
+}
+
+void expression() :
+{}
+{
+	assignmentExpression()
+}
+
+void assignmentExpression() :
+{}
+{
+	conditionalExpression() | assignment()
+}
+
+void assignment() :
+{}
+{
+	leftHandSide() assignmentOperator() assignmentExpression()
+}
+
+void leftHandSide() :
+{}
+{
+	expressionName() | fieldAccess() | arrayAccess()
+}
+
+void assignmentOperator() :
+{}
+{
+	< MULASS > | < DIVASS > | < MODASS > | < ADDASS > | < SUBASS > | < ANDASS > | < ORASS >
+}
+
+void conditionalExpression() :
+{}
+{
+	conditionalOrExpression() | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
+}
+
+void conditionalOrExpression() :
+{}
+{
+	conditionalAndExpression() | conditionalOrExpression() <OR> <OR> conditionalAndExpression()
+}
+
+void conditionalAndExpression() :
+{}
+{
+	inclusiveOrExpression() | conditionalAndExpression() <AND> <AND> inclusiveOrExpression()
+}
+
+void inclusiveOrExpression() :
+{}
+{
+	exclusiveOrExpression() | inclusiveOrExpression() <OR> exclusiveOrExpression()
+}
+
+void exclusiveOrExpression() :
+{}
+{
+	andExpression() | exclusiveOrExpression() <EXP> andExpression()
+}
+
+void andExpression() :
+{}
+{
+	equalityExpression() | andExpression() <AND> equalityExpression()
+}
+
+void equalityExpression() :
+{}
+{
+	relationalExpression() | equalityExpression() <ASS><ASS> relationalExpression() | equalityExpression() "!=" relationalExpression()
+}
+
+void relationalExpression() :
+{}
+{
+	shiftExpression() | relationalExpression() <MINOR> shiftExpression() | relationalExpression() <MAJOR> shiftExpression() | relationalExpression() <MINEQ> shiftExpression() | relationalExpression() <MAJEQ> shiftExpression() | relationalExpression() <INSTANCEOF> referenceType()
+}
+
+void shiftExpression() :
+{}
+{
+	additiveExpression() | shiftExpression() <MINOR> <MINOR> additiveExpression() | shiftExpression() <MAJOR><MAJOR> additiveExpression()
+}
+
+void additiveExpression() :
+{}
+{
+	multiplicativeExpression() | additiveExpression() <PLUS> multiplicativeExpression() | additiveExpression() <MINUS> multiplicativeExpression()
+}
+
+void multiplicativeExpression() :
+{}
+{
+	unaryExpression() | multiplicativeExpression() <MUL> unaryExpression() | multiplicativeExpression() <DIV> unaryExpression() | multiplicativeExpression() <MOD> unaryExpression()
+}
+
+void castExpression() :
+{}
+{
+	<PARTA> primitiveType() <PARTC> unaryExpression() | <PARTA> referenceType() <PARTC> unaryExpressionNotPlusMinus()
+}
+
+void unaryExpression() :
+{}
+{
+	preincrementExpression() | predecrementExpression() | <PLUS> unaryExpression() | <MINUS> unaryExpression() | unaryExpressionNotPlusMinus()
+}
+
+void predecrementExpression() :
+{}
+{
+	<MINUS> <MINUS> unaryExpression()
+}
+
+void preincrementExpression() :
+{}
+{
+	<PLUS> <PLUS> unaryExpression()
+}
+
+void unaryExpressionNotPlusMinus() :
+{}
+{
+	postfixExpression() | <TILDE> unaryExpression() | <NOT> unaryExpression() | castExpression()
+}
+
+void postdecrementExpression() :
+{}
+{
+	postfixExpression() <MINUS> <MINUS>
+}
+
+void postincrementExpression() :
+{}
+{
+	postfixExpression() <PLUS> <PLUS>
+}
+
+void postfixExpression() :
+{}
+{
+	primary() | expressionName() | postincrementExpression() | postdecrementExpression()
+}
+
+void methodInvocation() :
+{}
+{
+	methodName() <PARTA> (argumentList())? <PARTC> | primary() <DOT> <ID> <PARTA> (argumentList())? <PARTC> | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC>
+}
+
+void fieldAccess() :
+{}
+{
+	primary() <DOT> <ID> | <SUPER> <DOT> <ID>
+}
+
+void fieldAccess() :
+{}
+{
+	primary() <DOT> <ID> | <SUPER> <DOT> <ID>
+}
+
+void primary() :
+{}
+{
+	primaryNoNewArray() | arrayCreationExpression()
+}
+
+void primaryNoNewArray() :
+{}
+{
+	<LITERAL> | <THIS> | <PARTA> expression() <PARTC> | classInstanceCreationExpression() | fieldAccess() | methodInvocation() | arrayAccess()
+}
+
+void classInstanceCreationExpression() :
+{}
+{
+	<NEW> classType() <PARTA> (argumentList())? <PARTC>
+}
+
+void argumentList() :
+{}
+{
+	expression() | argumentList() <COMMA> expression()
+}
+
+void arrayCreationExpression() :
+{}
+{
+	<NEW> primitiveType() dimExprs() (dims())? | <NEW> classOrInterfaceType() dimExprs() (dims())?
+}
+
+void dimExprs() :
+{}
+{
+	dimExpr() | dimExprs() dimExpr()
+}
+
+void dimExpr() :
+{}
+{
+	<PARQA> expression() <PARQC>
+}
+
+void dims() :
+{}
+{
+	<PARQA> <PARQC> | dims() <PARQA> <PARQC>
+}
+
+void arrayAccess() :
+{}
+{
+	expressionName() <PARQA> expression() <PARQC> | primaryNoNewArray() <PARQA> expression() <PARQC>
+}
+
+void typeName():
+{}
+{
+  
+	< ID > |  packageName() <DOT> < ID >
+
+}  
+
+void simpleTypeName():
+{}
+{
+
+  < ID >
+  
+}
+
+void expressionName():
+{}
+{
+
+	< ID > | ambiguousName() < DOT > < ID > 
+
+}
+
+void methodName():
+{}
+{
+
+	< ID > | ambiguousName() < DOT > < ID > 
+
+} 
+
+void ambiguousName():
+{}
+{
+
+	< ID > | ambiguousName() < DOT > < ID > 
+
+} 
+
+void literal():
+{}
+{
+
+	integerLiteral() | floatingpointLiteral() | booleanLiteral()
+	| characterLiteral() | stringLiteral() | nullLiteral()
+
+}
+
+void integerLiteral(): 
+{}
+{
+
+	decimalIntegerLiteral()
+
+}
+
+void decimalIntegerLiteral(): 
+{}
+{
+
+	decimalNumeral() integerTypeSuffix() | {}
+}
+
+void integerTypeSuffix(): 
+{}
+{
+
+	"1" | "L"
+}
+
+void decimalNumeral():
+{}
+{
+
+	"0" | nonZeroDigit() (< DIGITS >)?
+
+}
+
+void digits():
+{}
+{
+
+	digit() | digits() digit()
+
+}
+
+void digit():
+{}
+{
+
+	"0" | nonZeroDigit()
+
+}
+
+void nonZeroDigit():
+{}
+{
+
+	"1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+}
+
+void hexDigit():
+{}
+{
+
+	 "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F"  
+
+}
+
+void floatingpointLiteral():
+{}
+{
+
+	digits() < DOT > (digits())? (exponentPart())? (floatTypeSuffix())? < DIGITS > (exponentPart())? (floatTypeSuffix())?
+ 
+}
+
+
+void exponentPart():
+{}
+{
+
+	exponentIndicator() signedInteger()
+
+}
+
+void exponentIndicator():
+{}
+{
+
+	"e" | "E"
+
+}
+
+void signedInteger():
+{}
+{
+
+	(sign())? digits()
+
+}
+
+void sign():
+{}
+{
+
+	"+" | "-"
+
+}
+
+void floatTypeSuffix():
+{}
+{
+
+	"f" | "F" | "d" | "D"
+
+}
+
+void booleanLiteral():
+{}
+{
+
+	< TRUE > | < FALSE >
+
+}
+
+void characterLiteral():
+{}
+{
+
+	< APEX > singleCharacter() < APEX >
+	
+}
+
+void singleCharacter():
+{}
+{
+
+	< INPUT_CHAR >
+	
+}
+
+
+void stringLiteral():
+{}
+{
+
+	< DAPEX >(stringCharacters())? < DAPEX >
+		
+}
+
+void stringCharacters():
+{}
+{
+
+	stringCharacter() | stringCharacters() stringCharacter() 
+		
+}
+
+
+void stringCharacter():
+{}
+{
+
+	< INPUT_CHAR >
+	
+}
+
+
+void nullLiteral():
+{}
+{
+
+	< NULL >
+	
+}
+
+
+
+
+
+
+
+
+
+
+
