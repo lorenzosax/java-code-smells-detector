@@ -5,3 +5,13 @@
 /TokenMgrError.java
 /JavaCodeSmellsDetector.java
 /JavaCodeSmellsDetectorTokenManager.java
+/JJTJavaCodeSmellsDetectorState.java
+/JavaCodeSmellsDetectorTreeConstants.java
+/Node.java
+/SimpleNode.java
+/ASTcompilationUnit.java
+/ASTimportDeclaration.java
+/ASTpackageDeclaration.java
+/ASTpackageName.java
+/ASTpackageName1.java
+/ASTtypeDeclaration.java
