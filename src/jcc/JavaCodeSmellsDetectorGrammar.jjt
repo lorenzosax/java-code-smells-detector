@@ -770,8 +770,7 @@ void switchBlockStatementGroups():
 {}
 {
 	switchBlockStatementGroup()
-	| switchBlockStatementGroups()
-	| switchBlockStatementGroup()
+	| switchBlockStatementGroups() switchBlockStatementGroup()
 }
 
 void switchBlockStatementGroup():
@@ -986,19 +985,29 @@ void relationalExpression() :
 void shiftExpression() :
 {}
 {
-	additiveExpression() | shiftExpression() <MINOR> <MINOR> additiveExpression() | shiftExpression() <MAJOR><MAJOR> additiveExpression()
+	additiveExpression()
+	| shiftExpression() <MINOR> <MINOR> additiveExpression()
+	| shiftExpression() <MAJOR><MAJOR> additiveExpression()
 }
+
+
+
 
 void additiveExpression() :
 {}
 {
-	multiplicativeExpression() | additiveExpression() <PLUS> multiplicativeExpression() | additiveExpression() <MINUS> multiplicativeExpression()
+	multiplicativeExpression()
+	| additiveExpression() <PLUS> multiplicativeExpression()
+	| additiveExpression() <MINUS> multiplicativeExpression()
 }
 
 void multiplicativeExpression() :
 {}
 {
-	unaryExpression() | multiplicativeExpression() <MUL> unaryExpression() | multiplicativeExpression() <DIV> unaryExpression() | multiplicativeExpression() <MOD> unaryExpression()
+	unaryExpression()
+	| multiplicativeExpression() <MUL> unaryExpression()
+	| multiplicativeExpression() <DIV> unaryExpression()
+	| multiplicativeExpression() <MOD> unaryExpression()
 }
 
 void castExpression() :
@@ -1046,7 +1055,7 @@ void postincrementExpression() :
 void postfixExpression() :
 {}
 {
-	primary() | expressionName() | postincrementExpression() | postdecrementExpression()
+	primary() | expressionName()| postincrementExpression() | postdecrementExpression()
 }
 
 void methodInvocation() :
@@ -1082,8 +1091,16 @@ void classInstanceCreationExpression() :
 void argumentList() :
 {}
 {
-	expression() | argumentList() <COMMA> expression()
+	expression() argumentList1() 
 }
+
+
+void argumentList1() :
+{}
+{
+  <COMMA> expression() argumentList1()  | {}
+}
+
 
 void arrayCreationExpression() :
 {}
@@ -1094,8 +1111,16 @@ void arrayCreationExpression() :
 void dimExprs() :
 {}
 {
-	dimExpr() | dimExprs() dimExpr()
+	dimExpr() dimExprs1()
 }
+
+
+void dimExprs1() :
+{}
+{
+	dimExpr()dimExprs1() | {} 
+}
+
 
 void dimExpr() :
 {}
@@ -1106,8 +1131,18 @@ void dimExpr() :
 void dims() :
 {}
 {
-	<PARQA> <PARQC> | dims() <PARQA> <PARQC>
+	dims1() <PARQA> <PARQC>
 }
+
+
+void dims1() :
+{}
+{
+
+   <PARQA> <PARQC> dims1() | {}
+	
+}
+
 
 void arrayAccess() :
 {}
@@ -1151,9 +1186,21 @@ void ambiguousName():
 {}
 {
 
-	< ID > | ambiguousName() < DOT > < ID > 
+	< ID > ambiguousName1() 
 
-} 
+}
+
+
+void ambiguousName1():
+{}
+{
+
+	< DOT > < ID > ambiguousName1() | {}
+	
+
+}
+
+
 
 void literal():
 {}
@@ -1198,7 +1245,16 @@ void digits():
 {}
 {
 
-	digit() | digits() digit()
+	digit() digits1()
+
+}
+
+
+void digits1():
+{}
+{
+
+	digit() digits1() | {}
 
 }
 
@@ -1312,9 +1368,20 @@ void stringCharacters():
 {}
 {
 
-	stringCharacter() | stringCharacters() stringCharacter() 
+	stringCharacter() stringCharacters1() 
 		
 }
+
+
+
+void stringCharacters1():
+{}
+{
+
+	stringCharacter()stringCharacters1() | {}
+		
+}
+
 
 
 void stringCharacter():
