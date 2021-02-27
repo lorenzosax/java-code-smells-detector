@@ -244,7 +244,7 @@ TOKEN :
 SimpleNode compilationUnit() :
 {}
 {
-	(packageDeclaration())? (importDeclarations())? (typeDeclarations())?
+	(packageDeclaration())? (importDeclarations())? (typeDeclarations())? < EOF >
 	{
 	  return jjtThis;
 	}
