@@ -185,6 +185,22 @@ TOKEN : /* IDS*/
     )* >
 }
 
+TOKEN: /* OPERATORS*/
+{
+ 
+ < ARITOP_LP :
+    (
+      "+"
+    | "-"
+    ) >
+| < ARITOP_HP :
+    (
+      "*"
+    | "/"
+    | "%"
+    ) >
+}
+
 TOKEN : /* PUNCTUATION SIMBOLS */
 {
   < PARTA : "(" >
@@ -205,19 +221,14 @@ TOKEN :
   | < APEX: "'" >
   | < DAPEX: [ "\"" ] >
   | < EXP: [ "^" ] >
-  | < PLUS : "+" >
-  | < MINUS : "-" >
   | < ASS : "=" >
-  | < MUL : "*" >
-  | < DIV : "/" >
-  | < MOD : "%" >
   | < MULASS : "*=" >
   | < DIVASS : "/=" >
-  | < MODASS : "%=" >
   | < ADDASS : "+=" >
   | < SUBASS : "-=" >
-  | < ANDASS : "&=" >
-  | < ORASS : "|=" >
+  | < NOT : "!" >
+  | < AND : "&&" >
+  | < OR : "||" >
   | < RELOP :
     (
       "<="
@@ -851,10 +862,8 @@ void statementExpression():
 {}
 {
 	assignment()
-	| preincrementExpression()
-	| postincrementExpression()
-	| predecrementExpression()
-	| postdecrementExpression()
+	| postIncrDecrExpression()
+	| preIncrDecrExpression()
 	| methodInvocation()
 	| classInstanceCreationExpression()
 }
@@ -1075,7 +1084,7 @@ void leftHandSide() :
 void assignmentOperator() :
 {}
 {
-	< MULASS > | < DIVASS > | < MODASS > | < ADDASS > | < SUBASS > | < ANDASS > | < ORASS >
+	< MULASS > | < DIVASS > | < ADDASS > | < SUBASS > 
 }
 
 void conditionalExpression() :
@@ -1093,7 +1102,7 @@ void conditionalOrExpression() :
 void conditionalOrExpression1():
 {}
 {
-  <OR> <OR> conditionalAndExpression() conditionalOrExpression1() | { }
+  <OR> conditionalAndExpression() conditionalOrExpression1() | { }
 }
 
 void conditionalAndExpression() :
@@ -1105,7 +1114,7 @@ void conditionalAndExpression() :
 void conditionalAndExpression1():
 {}
 {
-	<AND> <AND> inclusiveOrExpression() conditionalAndExpression1() | { }
+	<AND> inclusiveOrExpression() conditionalAndExpression1() | { }
 }
 
 void inclusiveOrExpression() :
@@ -1150,41 +1159,49 @@ void andExpression1():
 void equalityExpression() :
 {}
 {
-	relationalExpression() | equalityExpression() <ASS><ASS> relationalExpression() | equalityExpression() "!=" relationalExpression()
+	relationalExpression() equalityExpression1()  
+}
+
+void equalityExpression1():
+{}
+{
+  <RELOP> relationalExpression() equalityExpression1() | { }
 }
 
 void relationalExpression() :
 {}
 {
-	shiftExpression() | relationalExpression() <MINOR> shiftExpression() | relationalExpression() <MAJOR> shiftExpression() | relationalExpression() <MINEQ> shiftExpression() | relationalExpression() <MAJEQ> shiftExpression() | relationalExpression() <INSTANCEOF> referenceType()
+	 relationalExpression1() 
 }
 
-void shiftExpression() :
+void relationalExpression1():
 {}
 {
-	additiveExpression()
-	| shiftExpression() <MINOR> <MINOR> additiveExpression()
-	| shiftExpression() <MAJOR><MAJOR> additiveExpression()
+  <INSTANCEOF> referenceType() relationalExpression1() | { }
 }
-
-
-
 
 void additiveExpression() :
 {}
 {
-	multiplicativeExpression()
-	| additiveExpression() <PLUS> multiplicativeExpression()
-	| additiveExpression() <MINUS> multiplicativeExpression()
+	multiplicativeExpression() additiveExpression1() 	
+}
+
+void additiveExpression1():
+{}
+{
+  <ARITOP_LP> multiplicativeExpression() additiveExpression1() | { }
 }
 
 void multiplicativeExpression() :
 {}
 {
-	unaryExpression()
-	| multiplicativeExpression() <MUL> unaryExpression()
-	| multiplicativeExpression() <DIV> unaryExpression()
-	| multiplicativeExpression() <MOD> unaryExpression()
+	unaryExpression()  multiplicativeExpression1() 
+}
+
+void multiplicativeExpression1():
+{}
+{
+  <ARITOP_HP> unaryExpression() multiplicativeExpression1() | { }
 }
 
 void castExpression() :
@@ -1196,43 +1213,32 @@ void castExpression() :
 void unaryExpression() :
 {}
 {
-	preincrementExpression() | predecrementExpression() | <PLUS> unaryExpression() | <MINUS> unaryExpression() | unaryExpressionNotPlusMinus()
+	preIncrDecrExpression() | < ARITOP_LP > unaryExpression() | <ARITOP_LP> unaryExpression() | unaryExpressionNotPlusMinus()
 }
 
-void predecrementExpression() :
+void preIncrDecrExpression() :
 {}
 {
-	<MINUS> <MINUS> unaryExpression()
+	<ARITOP_LP> <ARITOP_LP> unaryExpression()
 }
 
-void preincrementExpression() :
-{}
-{
-	<PLUS> <PLUS> unaryExpression()
-}
 
 void unaryExpressionNotPlusMinus() :
 {}
 {
-	postfixExpression() | <TILDE> unaryExpression() | <NOT> unaryExpression() | castExpression()
+	postfixExpression() | <NOT> unaryExpression() | castExpression()
 }
 
-void postdecrementExpression() :
+void postIncrDecrExpression() :
 {}
 {
-	postfixExpression() <MINUS> <MINUS>
-}
-
-void postincrementExpression() :
-{}
-{
-	postfixExpression() <PLUS> <PLUS>
+	postfixExpression() <ARITOP_LP> <ARITOP_LP>
 }
 
 void postfixExpression() :
 {}
 {
-	primary() | expressionName()| postincrementExpression() | postdecrementExpression()
+	primary() | expressionName()| postIncrDecrExpression()
 }
 
 void methodInvocation() :
