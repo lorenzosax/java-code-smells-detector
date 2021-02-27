@@ -204,9 +204,9 @@ TOKEN : /* PUNCTUATION SIMBOLS */
 | < PARQC : "]" >
 | < PARGA : "{" >
 | < PARGC : "}" >
+| < DOT : "." >
 | < SEMIC : ";" >
 | < COMMA : "," >
-| < DOT : "." >
 }
 
 TOKEN :
@@ -259,13 +259,13 @@ void packageDeclaration() :
 void packageName() :
 {}
 {
-  < ID > packageName1()
+  <ID> packageName1()
 }
 
 void packageName1() :
 {}
 {
-  <DOT> < ID > packageName1() | {}
+  <DOT> (<ID> | < ARITOP_HP > <SEMIC >)  packageName1() | {}
 }
 
 void importDeclarations() :
@@ -283,19 +283,19 @@ void importDeclarations1() :
 void importDeclaration() :
 {}
 {
-  LOOKAHEAD(2) singleTypeImportDeclaration() | typeImportOnDemandDeclaration()
+  LOOKAHEAD(3) singleTypeImportDeclaration() | typeImportOnDemandDeclaration()
 }
 
 void singleTypeImportDeclaration() :
 {}
 {
-  < IMPORT > typeName() < SEMIC >
+  <IMPORT> typeName() < SEMIC >
 }
 
 void typeImportOnDemandDeclaration() :
 {}
 {
-  < IMPORT > <DOT> < SEMIC >
+  <IMPORT> packageName() 
 }
 
 void superConstruct():
@@ -325,13 +325,13 @@ void interfaceTypeList1() :
 void typeDeclarations() :
 {}
 {
-  typeDeclarations1() typeDeclaration() 
+  typeDeclaration() typeDeclarations1() 
 }
 
 void typeDeclarations1() :
 {}
 {
-  typeDeclaration() typeDeclarations1()
+  typeDeclaration() typeDeclarations1() | { }
 }
 
 void typeDeclaration() :
@@ -511,7 +511,7 @@ void variableDeclarators() :
 void variableDeclarators1() :
 {}
 {
-  < COMMA > variableDeclarator()variableDeclarators1()
+  < COMMA > variableDeclarator() variableDeclarators1()
 }
 
 void variableDeclarator() :
@@ -795,7 +795,7 @@ void blockStatement():
 void localVariableDeclarationStatement():
 {}
 {
-	localVariableDeclaration() < SEMIC >
+	localVariableDeclaration() <SEMIC>
 }
 
 void localVariableDeclaration():
@@ -1345,16 +1345,14 @@ void arrayAccess() :
 void typeName():
 {}
 {
-  
-	LOOKAHEAD(2) < ID > |  packageName() <DOT> < ID >
-
+   LOOKAHEAD(2) <ID> | packageName() <DOT> <ID>
 }  
 
 void simpleTypeName():
 {}
 {
 
-  < ID >
+   <ID>
   
 }
 
