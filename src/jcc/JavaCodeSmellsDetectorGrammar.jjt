@@ -19,7 +19,7 @@ public class JavaCodeSmellsDetector
   {
     try
     {
-      FileInputStream file = new FileInputStream("Process.java");
+      FileInputStream file = new FileInputStream("Example.java");
       
       JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
       SimpleNode sn = detector.compilationUnit();
@@ -169,11 +169,6 @@ TOKEN : /* NUMBERS */
     < DIGITS > < OPT_FRANCTION > < OPT_EXPONENT > >
 }
 
-TOKEN :
-{
-	< LITERAL : "\"" (~["\n","\r"])* "\"" >
-	| < INPUT_CHAR : (~["\n","\r", "\"", "\'", "\\"]) >
-}
 
 TOKEN : /* IDS*/
 {
@@ -240,6 +235,12 @@ TOKEN :
     ) >
 }
 
+TOKEN :
+{
+	< LITERAL : "\"" (~["\n","\r"])* "\"" >
+	| < INPUT_CHAR : (~["\n","\r", "\"", "\'", "\\"]) >
+}
+
 SimpleNode compilationUnit() :
 {}
 {
@@ -282,7 +283,7 @@ void importDeclarations1() :
 void importDeclaration() :
 {}
 {
-  singleTypeImportDeclaration() | typeImportOnDemandDeclaration()
+  LOOKAHEAD(2) singleTypeImportDeclaration() | typeImportOnDemandDeclaration()
 }
 
 void singleTypeImportDeclaration() :
@@ -336,7 +337,7 @@ void typeDeclarations1() :
 void typeDeclaration() :
 {}
 {
-  classDeclaration() | interfaceDeclaration() | < SEMIC >
+  LOOKAHEAD(3) classDeclaration() | interfaceDeclaration() | < SEMIC >
 }
 
 void classDeclaration() :
@@ -384,13 +385,13 @@ void classBodyDeclarations1() :
 void classBodyDeclaration() :
 {}
 {
-  classMemberDeclaration() | staticInitializer() | constructorDeclaration()
+  LOOKAHEAD(3) classMemberDeclaration() | constructorDeclaration() | staticInitializer()
 }
 
 void classMemberDeclaration() :
 {}
 {
-  fieldDeclaration() | methodDeclaration()
+  LOOKAHEAD(3) fieldDeclaration() | methodDeclaration()
 }
 
 void staticInitializer() :
@@ -474,7 +475,7 @@ void constructorBody() :
 void explicitConstructorInvocation() :
 {}
 {
-  < THIS > (argumentList())? | < SUPER > (argumentList())?
+  < THIS > argumentList() | < SUPER > argumentList()
 }
 
 void fieldDeclaration() :
@@ -516,7 +517,7 @@ void variableDeclarators1() :
 void variableDeclarator() :
 {}
 {
-  variableDeclaratorId() | variableDeclaratorId() < ASS > variableInitializer()
+  LOOKAHEAD(3) variableDeclaratorId() | variableDeclaratorId() < ASS > variableInitializer()
 }
 
 void variableDeclaratorId() :
@@ -642,7 +643,7 @@ void interfaceMemberDeclarations1() :
 void interfaceMemberDeclaration() :
 {}
 {
-  constantDeclaration() | abstractMethodDeclaration()
+   LOOKAHEAD(3) constantDeclaration() | abstractMethodDeclaration()
 }
 
 void constantDeclaration() :
@@ -684,7 +685,7 @@ void abstractMethodModifier() :
 void arrayInitializer() :
 {}
 {
-  < PARGA > (variableInitializers())? (< COMMA >)? < PARGC >
+  < PARGA > variableInitializers() (< COMMA >)? < PARGC >
 }
 
 void variableInitializers() :
@@ -699,10 +700,17 @@ void variableInitializers1() :
   < COMMA > variableInitializer() variableInitializers1() | {}
 }
 
+/* --------------------- DA TESTARE -------------------------------*/
 void type() :
 {}
 {
-primitiveType() | referenceType()
+	(primitiveType() | classOrInterfaceType()) type1() 
+}
+
+void type1():
+{}
+{
+	< PARQA > < PARQC > type1() | { }
 }
 
 void primitiveType() :
@@ -732,13 +740,13 @@ void floatingPointType():
 void referenceType():
 {}
 {
-  classOrInterfaceType() | arrayType()
+   LOOKAHEAD(3) classOrInterfaceType() |  type() < PARQA > < PARQC >
 }
 
 void classOrInterfaceType():
 {}
 {
-  classType() | interfaceType()
+   LOOKAHEAD(3) classType() | interfaceType()
 }
 
 void classType():
@@ -752,12 +760,12 @@ void interfaceType():
 {
   typeName()
 }
-
+/*
 void arrayType():
 {}
 {
   type() < PARQA > < PARQC >
-}
+}*/
 
 void block():
 {}
@@ -781,7 +789,7 @@ void blockStatements1():
 void blockStatement():
 {}
 {
-	localVariableDeclarationStatement() | statement()
+	 LOOKAHEAD(3) localVariableDeclarationStatement() | statement()
 }
 
 void localVariableDeclarationStatement():
@@ -800,9 +808,9 @@ void localVariableDeclaration():
 void statement():
 {}
 {
-	statementWithoutTrailingSubstatement()
+	 LOOKAHEAD(2) statementWithoutTrailingSubstatement()
 	| labeledStatement()
-	| ifThenStatement()
+	|  LOOKAHEAD(3) ifThenStatement()
 	| ifThenElseStatement()
 	| whileStatement()
 	| forStatement() 
@@ -811,7 +819,7 @@ void statement():
 void statementNoShortIf():
 {}
 {
-	statementWithoutTrailingSubstatement()
+	 LOOKAHEAD(2) statementWithoutTrailingSubstatement()
 	| labeledStatementNoShortIf()
 	| ifThenElseStatementNoShortIf()
 	| whileStatementNoShortIf()
@@ -861,10 +869,10 @@ void expressionStatement():
 void statementExpression():
 {}
 {
-	assignment()
-	| postIncrDecrExpression()
+	 LOOKAHEAD(3) assignment()
+	//| postIncrDecrExpression()
 	| preIncrDecrExpression()
-	| methodInvocation()
+	|  LOOKAHEAD(3) methodInvocation()
 	| classInstanceCreationExpression()
 }
 
@@ -957,19 +965,19 @@ void doStatement():
 void forStatement():
 {}
 {
-  < FOR > <PARTA > (forInit())? < SEMIC > (expression())?  < SEMIC > (forUpdate())? < PARTC > statement() 
+  < FOR > <PARTA > forInit() < SEMIC > expression()  < SEMIC > forUpdate() < PARTC > statement() 
 }
 
 void forStatementNoShortIf():
 {}
 {
-  < FOR > <PARTA > (forInit())? < SEMIC > (expression())?  < SEMIC > (forUpdate())? < PARTC > statementNoShortIf() 
+  < FOR > <PARTA > forInit() < SEMIC > expression()  < SEMIC > forUpdate() < PARTC > statementNoShortIf() 
 }
 
 void forInit():
 {}
 {
-  	statementExpressionList()
+  	 LOOKAHEAD(3) statementExpressionList()
 	| localVariableDeclaration()	 
 }
 
@@ -1005,13 +1013,13 @@ void continueStatement():
 void returnStatement():
 {}
 {
-  < RETURN > (expression())? < SEMIC >
+  < RETURN > expression() < SEMIC >
 }
 
 void throwsStatement():
 {}
 {
-  < THROW > (expression())? < SEMIC >
+  < THROW > expression() < SEMIC >
 }
 
 void synchronizedStatement():
@@ -1023,7 +1031,7 @@ void synchronizedStatement():
 void tryStatement():
 {}
 {
-  	< TRY > block() catches()
+  	 LOOKAHEAD(3) < TRY > block() catches()
 	| < TRY > block() (catches())? finallys()
 }
 
@@ -1078,7 +1086,7 @@ void assignment() :
 void leftHandSide() :
 {}
 {
-	expressionName() | fieldAccess() | arrayAccess()
+	 LOOKAHEAD(3) expressionName() /*| fieldAccess()*/ | arrayAccess()
 }
 
 void assignmentOperator() :
@@ -1090,7 +1098,7 @@ void assignmentOperator() :
 void conditionalExpression() :
 {}
 {
-	conditionalOrExpression() | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
+	 LOOKAHEAD(3) conditionalOrExpression() | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
 }
 
 void conditionalOrExpression() :
@@ -1207,13 +1215,13 @@ void multiplicativeExpression1():
 void castExpression() :
 {}
 {
-	<PARTA> primitiveType() <PARTC> unaryExpression() | <PARTA> referenceType() <PARTC> unaryExpressionNotPlusMinus()
+	<PARTA> primitiveType() <PARTC> unaryExpression() // | <PARTA> referenceType() <PARTC> unaryExpressionNotPlusMinus()
 }
 
 void unaryExpression() :
 {}
 {
-	preIncrDecrExpression() | < ARITOP_LP > unaryExpression() | <ARITOP_LP> unaryExpression() | unaryExpressionNotPlusMinus()
+	 LOOKAHEAD(3) preIncrDecrExpression() |  LOOKAHEAD(3) < ARITOP_LP > unaryExpression() | <ARITOP_LP> unaryExpression() // | unaryExpressionNotPlusMinus()
 }
 
 void preIncrDecrExpression() :
@@ -1222,7 +1230,7 @@ void preIncrDecrExpression() :
 	<ARITOP_LP> <ARITOP_LP> unaryExpression()
 }
 
-
+/*
 void unaryExpressionNotPlusMinus() :
 {}
 {
@@ -1232,7 +1240,7 @@ void unaryExpressionNotPlusMinus() :
 void postIncrDecrExpression() :
 {}
 {
-	postfixExpression() <ARITOP_LP> <ARITOP_LP>
+	primary() | expressionName() | postIncrDecrExpression() <ARITOP_LP> <ARITOP_LP>
 }
 
 void postfixExpression() :
@@ -1240,35 +1248,36 @@ void postfixExpression() :
 {
 	primary() | expressionName()| postIncrDecrExpression()
 }
+*/
 
 void methodInvocation() :
 {}
 {
-	methodName() <PARTA> (argumentList())? <PARTC> | primary() <DOT> <ID> <PARTA> (argumentList())? <PARTC> | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC>
+	 LOOKAHEAD(3) methodName() <PARTA> argumentList() <PARTC> | LOOKAHEAD(3) primary() <DOT> <ID> <PARTA> argumentList() <PARTC> | <SUPER> <DOT> <ID> <PARTA> argumentList() <PARTC>
 }
-
+/*
 void fieldAccess() :
 {}
 {
 	primary() <DOT> <ID> | <SUPER> <DOT> <ID>
 }
-
+*/
 void primary() :
 {}
 {
-	primaryNoNewArray() | arrayCreationExpression()
+	LOOKAHEAD(3) primaryNoNewArray() | arrayCreationExpression()
 }
 
 void primaryNoNewArray() :
 {}
 {
-	<LITERAL> | <THIS> | <PARTA> expression() <PARTC> | classInstanceCreationExpression() | fieldAccess() | methodInvocation() | arrayAccess()
+	<LITERAL> | <THIS> | <PARTA> expression() <PARTC> | classInstanceCreationExpression() /* | fieldAccess()| methodInvocation() */  | arrayAccess()
 }
 
 void classInstanceCreationExpression() :
 {}
 {
-	<NEW> classType() <PARTA> (argumentList())? <PARTC>
+	<NEW> classType() <PARTA> argumentList() <PARTC>
 }
 
 void argumentList() :
@@ -1288,7 +1297,7 @@ void argumentList1() :
 void arrayCreationExpression() :
 {}
 {
-	<NEW> primitiveType() dimExprs() (dims())? | <NEW> classOrInterfaceType() dimExprs() (dims())?
+	LOOKAHEAD(2) <NEW> primitiveType() dimExprs() (dims())? | <NEW> classOrInterfaceType() dimExprs() (dims())?
 }
 
 void dimExprs() :
@@ -1330,14 +1339,14 @@ void dims1() :
 void arrayAccess() :
 {}
 {
-	expressionName() <PARQA> expression() <PARQC> | primaryNoNewArray() <PARQA> expression() <PARQC>
+	expressionName() <PARQA> expression() <PARQC> // | primaryNoNewArray() <PARQA> expression() <PARQC>
 }
 
 void typeName():
 {}
 {
   
-	< ID > |  packageName() <DOT> < ID >
+	LOOKAHEAD(2) < ID > |  packageName() <DOT> < ID >
 
 }  
 
@@ -1353,7 +1362,7 @@ void expressionName():
 {}
 {
 
-	< ID > | ambiguousName() < DOT > < ID > 
+	LOOKAHEAD(2) < ID > | ambiguousName() < DOT > < ID > 
 
 }
 
@@ -1361,7 +1370,7 @@ void methodName():
 {}
 {
 
-	< ID > | ambiguousName() < DOT > < ID > 
+	LOOKAHEAD(2) < ID > | ambiguousName() < DOT > < ID > 
 
 } 
 
@@ -1384,12 +1393,11 @@ void ambiguousName1():
 }
 
 
-
 void literal():
 {}
 {
 
-	integerLiteral() | floatingpointLiteral() | booleanLiteral()
+	LOOKAHEAD(3) integerLiteral() | floatingpointLiteral() | booleanLiteral()
 	| characterLiteral() | stringLiteral() | nullLiteral()
 
 }
@@ -1413,14 +1421,15 @@ void integerTypeSuffix():
 {}
 {
 
-	"1" | "L"
+	< DIGITS > | < ID >
+	//"1" | "L"
 }
 
 void decimalNumeral():
 {}
 {
-
-	"0" | nonZeroDigit() (< DIGITS >)?
+	< DIGITS >
+	//"0" | nonZeroDigit() (< DIGITS >)?
 
 }
 
@@ -1444,24 +1453,24 @@ void digits1():
 void digit():
 {}
 {
-
-	"0" | nonZeroDigit()
+	< DIGITS >
+	//"0" | nonZeroDigit()
 
 }
 
 void nonZeroDigit():
 {}
 {
-
-	"1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+	< DIGITS >
+	//"1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
 
 }
 
 void hexDigit():
 {}
 {
-
-	 "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F"  
+	< DIGITS > | < ID >
+	 //"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F"  
 
 }
 
@@ -1485,8 +1494,8 @@ void exponentPart():
 void exponentIndicator():
 {}
 {
-
-	"e" | "E"
+	< ID >
+	//"e" | "E"
 
 }
 
@@ -1501,16 +1510,15 @@ void signedInteger():
 void sign():
 {}
 {
-
-	"+" | "-"
-
+	< ARITOP_LP >
+	//"+" | "-"
 }
 
 void floatTypeSuffix():
 {}
 {
-
-	"f" | "F" | "d" | "D"
+	< ID >
+	//"f" | "F" | "d" | "D"
 
 }
 
