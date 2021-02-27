@@ -1,12 +1,22 @@
 /**
  * JavaCC template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
- */options{  static = true;}PARSER_BEGIN(JavaCodeSmellsDetector)
+ */
+options
+{
+  static = true;
+}
+
+PARSER_BEGIN(JavaCodeSmellsDetector)
+
 package jcc;
 
 import java.io.*;
 import java.util.*;
 
-public class JavaCodeSmellsDetector{  public static void main(String args []) throws ParseException, IOException  {
+public class JavaCodeSmellsDetector
+{
+  public static void main(String args []) throws ParseException, IOException
+  {
     try
     {
       FileInputStream file = new FileInputStream("Process.java");
@@ -32,7 +42,12 @@ public class JavaCodeSmellsDetector{  public static void main(String args []) 
 		System.out.println(t.kind + ": " + t.image);
 		t = jcsd.getNextToken();
 	}*/
-	  }}PARSER_END(JavaCodeSmellsDetector)
+	
+  }
+}
+
+PARSER_END(JavaCodeSmellsDetector)
+
 TOKEN_MGR_DECLS :
 {}
 
@@ -203,16 +218,15 @@ TOKEN :
   | < SUBASS : "-=" >
   | < ANDASS : "&=" >
   | < ORASS : "|=" >
-  | < MINEQ : "<=" >
-  | < EQUAL : "==" >
-  | < MAJEQ : ">=" >
-  | < NOTEQ : "!=" >
-  | < MAJOR : ">" >
-  | < MINOR : "<" >
-  | < NOT : "!" >
-  | < TILDE : "~" >
-  | < AND : "&" >
-  | < OR : "|" >
+  | < RELOP :
+    (
+      "<="
+    | "=="
+    | "!="
+    | ">="
+    | "<"
+    | ">"
+    ) >
 }
 
 SimpleNode compilationUnit() :
@@ -245,7 +259,13 @@ void packageName1() :
 void importDeclarations() :
 {}
 {
-  importDeclaration() | importDeclarations() importDeclaration()
+  importDeclaration() importDeclarations1()
+}
+
+void importDeclarations1() :
+{}
+{
+  importDeclaration() importDeclarations1() | {}
 }
 
 void importDeclaration() :
@@ -278,16 +298,28 @@ void interfaces():
   < IMPLEMENTS > interfaceTypeList()
 }
 
-void interfaceTypeList():
+void interfaceTypeList() :
 {}
 {
-  interfaceType() | interfaceTypeList() < COMMA > interfaceType()
+  interfaceType() interfaceTypeList1()
+}
+
+void interfaceTypeList1() :
+{}
+{
+  < COMMA > interfaceType() interfaceTypeList1() | {}
 }
 
 void typeDeclarations() :
 {}
 {
-  typeDeclaration() | typeDeclarations() typeDeclaration()
+  typeDeclarations1() typeDeclaration() 
+}
+
+void typeDeclarations1() :
+{}
+{
+  typeDeclaration() typeDeclarations1()
 }
 
 void typeDeclaration() :
@@ -305,7 +337,13 @@ void classDeclaration() :
 void classModifiers() :
 {}
 {
-  classModifier() | classModifiers() classModifier()
+  classModifier() classModifiers1()
+}
+
+void classModifiers1() :
+{}
+{
+  classModifier() classModifiers1() | {}
 }
 
 void classModifier() :
@@ -323,7 +361,13 @@ void classBody() :
 void classBodyDeclarations() :
 {}
 {
-  classBodyDeclaration() | classBodyDeclarations() classBodyDeclaration()
+   classBodyDeclaration() classBodyDeclarations1()  
+}
+
+void classBodyDeclarations1() :
+{}
+{
+  classBodyDeclaration() classBodyDeclarations1() | {}
 }
 
 void classBodyDeclaration() :
@@ -353,7 +397,13 @@ void constructorDeclaration() :
 void constructorModifiers() :
 {}
 {
-  constructorModifier() | constructorModifiers() constructorModifier()
+  constructorModifier() constructorModifiers1()
+}
+
+void constructorModifiers1() :
+{}
+{
+  constructorModifier() constructorModifiers1() | {}
 }
 
 void constructorModifier() :
@@ -371,7 +421,13 @@ void constructorDeclarator():
 void formalParameterList() :
 {}
 {
-  formalParameter() | formalParameterList() < COMMA > formalParameter()
+  formalParameter() formalParameterList1()
+}
+
+void formalParameterList1() :
+{}
+{
+  < COMMA > formalParameter() formalParameterList1() | {}
 }
 
 void formalParameter() :
@@ -389,7 +445,13 @@ void throwsConstruct() :
 void classTypeList() :
 {}
 {
-  classType() | classTypeList() < COMMA > classType()  
+  classType() classTypeList1()  
+}
+
+void classTypeList1() :
+{}
+{
+  < COMMA > classType() classTypeList1() | {}
 }
 
 void constructorBody() :
@@ -413,7 +475,13 @@ void fieldDeclaration() :
 void fieldModifiers() :
 {}
 {
-  fieldModifier() | fieldModifiers() fieldModifier()
+  fieldModifier() fieldModifiers1()
+}
+
+void fieldModifiers1() :
+{}
+{
+  fieldModifier() fieldModifiers1() | {}
 }
 
 void fieldModifier() :
@@ -425,7 +493,13 @@ void fieldModifier() :
 void variableDeclarators() :
 {}
 {
-  variableDeclarator() | variableDeclarators() < COMMA > variableDeclarator()
+  variableDeclarator() variableDeclarators1() 
+}
+
+void variableDeclarators1() :
+{}
+{
+  < COMMA > variableDeclarator()variableDeclarators1()
 }
 
 void variableDeclarator() :
@@ -437,7 +511,13 @@ void variableDeclarator() :
 void variableDeclaratorId() :
 {}
 {
-  < ID > | variableDeclaratorId() < PARQA > < PARQC > 
+  < ID > variableDeclaratorId1()
+}
+
+void variableDeclaratorId1() :
+{}
+{
+  < PARQA > < PARQC > variableDeclaratorId() | {}
 }
 
 void variableInitializer() :
@@ -467,7 +547,13 @@ void resultType() :
 void methodModifiers() :
 {}
 {
-  methodModifier() | methodModifiers() methodModifier()
+  methodModifier() methodModifiers1()
+}
+
+void methodModifiers1() :
+{}
+{
+  methodModifier() methodModifiers1() | {}
 }
 
 void methodModifier() :
@@ -497,7 +583,13 @@ void interfaceDeclaration() :
 void interfaceModifiers() :
 {}
 {
-  interfaceModifier() | interfaceModifiers() interfaceModifier()
+  interfaceModifier() interfaceModifiers1()
+}
+
+void interfaceModifiers1() :
+{}
+{
+  interfaceModifier() interfaceModifiers() | {}
 }
 
 void interfaceModifier() :
@@ -509,7 +601,13 @@ void interfaceModifier() :
 void extendsInterfaces() :
 {}
 {
-  < EXTENDS > interfaceType() | extendsInterfaces() < COMMA > interfaceType()
+  < EXTENDS > interfaceType() extendsInterfaces1() 
+}
+
+void extendsInterfaces1() :
+{}
+{
+  < COMMA > interfaceType() extendsInterfaces1() | {}
 }
 
 void interfaceBody() :
@@ -521,7 +619,13 @@ void interfaceBody() :
 void interfaceMemberDeclarations() :
 {}
 {
-  interfaceMemberDeclaration() | interfaceMemberDeclarations() interfaceMemberDeclaration()
+  interfaceMemberDeclaration() interfaceMemberDeclarations1()
+}
+
+void interfaceMemberDeclarations1() :
+{}
+{
+  interfaceMemberDeclaration() interfaceMemberDeclarations1() | {}
 }
 
 void interfaceMemberDeclaration() :
@@ -551,7 +655,13 @@ void abstractMethodDeclaration() :
 void abstractMethodModifiers() :
 {}
 {
-  abstractMethodModifier() | abstractMethodModifiers() abstractMethodModifier()
+  abstractMethodModifier() abstractMethodModifiers1()
+}
+
+void abstractMethodModifiers1() :
+{}
+{
+  abstractMethodModifier() abstractMethodModifiers1() | {}
 }
 
 void abstractMethodModifier() :
@@ -569,7 +679,13 @@ void arrayInitializer() :
 void variableInitializers() :
 {}
 {
-  variableInitializer() | variableInitializers() < COMMA > variableInitializer()
+  variableInitializer() variableInitializers1() 
+}
+
+void variableInitializers1() :
+{}
+{
+  < COMMA > variableInitializer() variableInitializers1() | {}
 }
 
 void type() :
