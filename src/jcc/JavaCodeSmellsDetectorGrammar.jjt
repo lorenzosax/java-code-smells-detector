@@ -754,10 +754,17 @@ void block():
   < PARGA > (blockStatements())? < PARGC >
 }
 
+
 void blockStatements():
 {}
 {
-  blockStatement() | blockStatements() blockStatement()
+  blockStatement() blockStatements1() 
+}
+
+void blockStatements1():
+{}
+{
+	blockStatement() blockStatements1() | { }
 }
 
 void blockStatement():
@@ -885,8 +892,13 @@ void switchBlock():
 void switchBlockStatementGroups():
 {}
 {
-	switchBlockStatementGroup()
-	| switchBlockStatementGroups() switchBlockStatementGroup()
+	switchBlockStatementGroup() switchBlockStatementGroups1() 
+}
+
+void switchBlockStatementGroups1():
+{}
+{
+	switchBlockStatementGroup() switchBlockStatementGroups1() | { }
 }
 
 void switchBlockStatementGroup():
@@ -898,8 +910,13 @@ void switchBlockStatementGroup():
 void switchLabels():
 {}
 {
-	switchLabel()
-	| switchLabels() switchLabel()
+	switchLabel() switchLabels1() 
+}
+
+void switchLabels1():
+{}
+{
+	switchLabel() switchLabels1() | { }
 }
 
 void switchLabel(): 
@@ -956,8 +973,13 @@ void forUpdate():
 void statementExpressionList():
 {}
 {
-  	statementExpression()
-	| statementExpressionList()	< COMMA > statementExpression()
+  	statementExpression() statementExpressionList1() 
+}
+
+void statementExpressionList1():
+{}
+{
+	< COMMA > statementExpression() statementExpressionList1() | { }
 }
 
 void breakStatement():
@@ -999,7 +1021,13 @@ void tryStatement():
 void catches():
 {}
 {
-  	catchClause() | catches() catchClause()
+  	catchClause() catches1() 
+}
+
+void catches1():
+{}
+{
+	catchClause() catches1() | { }
 }
 
 void catchClause():
@@ -1059,32 +1087,65 @@ void conditionalExpression() :
 void conditionalOrExpression() :
 {}
 {
-	conditionalAndExpression() | conditionalOrExpression() <OR> <OR> conditionalAndExpression()
+	conditionalAndExpression() conditionalOrExpression1() 
+}
+
+void conditionalOrExpression1():
+{}
+{
+  <OR> <OR> conditionalAndExpression() conditionalOrExpression1() | { }
 }
 
 void conditionalAndExpression() :
 {}
 {
-	inclusiveOrExpression() | conditionalAndExpression() <AND> <AND> inclusiveOrExpression()
+	inclusiveOrExpression() conditionalAndExpression1() 
+}
+
+void conditionalAndExpression1():
+{}
+{
+	<AND> <AND> inclusiveOrExpression() conditionalAndExpression1() | { }
 }
 
 void inclusiveOrExpression() :
 {}
 {
-	exclusiveOrExpression() | inclusiveOrExpression() <OR> exclusiveOrExpression()
+	exclusiveOrExpression() inclusiveOrExpression1() 
 }
+
+void inclusiveOrExpression1():
+{}
+{
+	<OR> exclusiveOrExpression() inclusiveOrExpression1() | { }
+}
+
 
 void exclusiveOrExpression() :
 {}
 {
-	andExpression() | exclusiveOrExpression() <EXP> andExpression()
+	andExpression() exclusiveOrExpression1()
+}
+
+void exclusiveOrExpression1() :
+{}
+{
+	<EXP> andExpression() exclusiveOrExpression1() | { }
 }
 
 void andExpression() :
 {}
 {
-	equalityExpression() | andExpression() <AND> equalityExpression()
+	equalityExpression() andExpression1() 
 }
+
+void andExpression1():
+{}
+{
+  <AND> equalityExpression() andExpression1() | { }
+}
+
+
 
 void equalityExpression() :
 {}
