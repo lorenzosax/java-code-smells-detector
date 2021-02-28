@@ -469,7 +469,11 @@ void classTypeList1() :
 void constructorBody() :
 {}
 {
-  < PARGA > (explicitConstructorInvocation())? (blockStatements())?
+  /*< PARGA > (explicitConstructorInvocation())? (blockStatements())?*/
+  LOOKAHEAD(2) < PARGA >
+  | LOOKAHEAD(2) < PARGA > explicitConstructorInvocation()
+  | LOOKAHEAD(2) < PARGA > blockStatements()
+  | < PARGA > explicitConstructorInvocation() blockStatements()
 }
 
 void explicitConstructorInvocation() :
@@ -511,7 +515,7 @@ void variableDeclarators() :
 void variableDeclarators1() :
 {}
 {
-  < COMMA > variableDeclarator() variableDeclarators1()
+  < COMMA > variableDeclarator() variableDeclarators1() | {}
 }
 
 void variableDeclarator() :
@@ -535,7 +539,7 @@ void variableDeclaratorId1() :
 void variableInitializer() :
 {}
 {
-  expression() | arrayInitializer()
+  arrayInitializer() | expression()
 }
 
 void methodDeclaration() :
@@ -903,7 +907,11 @@ void switchStatement():
 void switchBlock():
 {}
 {
-	< PARGA > (switchBlockStatementGroups())? (switchLabels())? < PARGC > 
+	/*< PARGA > (switchBlockStatementGroups())? (switchLabels())? < PARGC >*/
+	LOOKAHEAD(2) < PARGA > < PARGC >
+	| LOOKAHEAD(2) < PARGA > switchBlockStatementGroups() < PARGC >
+	| LOOKAHEAD(2) < PARGA > switchLabels() < PARGC >
+	| < PARGA > switchBlockStatementGroups() switchLabels() < PARGC >
 }
 
 void switchBlockStatementGroups():
@@ -1074,7 +1082,7 @@ void expression() :
 void assignmentExpression() :
 {}
 {
-	conditionalExpression() | assignment()
+	assignment() | conditionalExpression()
 }
 
 void assignment() :
@@ -1395,7 +1403,7 @@ void literal():
 {}
 {
 
-	LOOKAHEAD(3) integerLiteral() | floatingpointLiteral() | booleanLiteral()
+	LOOKAHEAD(2) integerLiteral() | floatingpointLiteral() | booleanLiteral()
 	| characterLiteral() | stringLiteral() | nullLiteral()
 
 }
@@ -1431,31 +1439,6 @@ void decimalNumeral():
 
 }
 
-void digits():
-{}
-{
-
-	digit() digits1()
-
-}
-
-
-void digits1():
-{}
-{
-
-	digit() digits1() | {}
-
-}
-
-void digit():
-{}
-{
-	< DIGITS >
-	//"0" | nonZeroDigit()
-
-}
-
 void nonZeroDigit():
 {}
 {
@@ -1475,9 +1458,8 @@ void hexDigit():
 void floatingpointLiteral():
 {}
 {
-
-	digits() < DOT > (digits())? (exponentPart())? (floatTypeSuffix())? < DIGITS > (exponentPart())? (floatTypeSuffix())?
- 
+	/* 	digits() < DOT > (digits())? (exponentPart())? (floatTypeSuffix())? < DIGITS > (exponentPart())? (floatTypeSuffix())? */
+	< DIGITS > < DOT > <DIGITS> exponentPart() (floatTypeSuffix())?
 }
 
 
@@ -1501,7 +1483,7 @@ void signedInteger():
 {}
 {
 
-	(sign())? digits()
+	(sign())? < DIGITS >
 
 }
 
@@ -1589,14 +1571,3 @@ void nullLiteral():
 	< NULL >
 	
 }
-
-
-
-
-
-
-
-
-
-
-
