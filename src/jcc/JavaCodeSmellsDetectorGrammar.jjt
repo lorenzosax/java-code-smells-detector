@@ -155,7 +155,7 @@ TOKEN :
 TOKEN : /* NUMBERS */
 {
   < #DIGIT : [ "0"-"9" ] >
-| < DIGITS : (< DIGIT >)+ >
+| < #DIGITS : (< DIGIT >)+ >
 | < #OPT_FRANCTION : ("." < DIGITS >)? >
 | < #OPT_EXPONENT :
     (
@@ -213,8 +213,6 @@ TOKEN :
 {
   < QMARK : "?" >
   | < DPOINTS: ":" >
-  | < APEX: "'" >
-  | < DAPEX: [ "\"" ] >
   | < EXP: [ "^" ] >
   | < ASS : "=" >
   | < MULASS : "*=" >
@@ -238,7 +236,7 @@ TOKEN :
 TOKEN :
 {
 	< LITERAL : "\"" (~["\n","\r"])* "\"" >
-	| < INPUT_CHAR : (~["\n","\r", "\"", "\'", "\\"]) >
+	| < CHARVALUE : "\'" (~[ "\n", "\r" ]) "\'" >
 }
 
 SimpleNode compilationUnit() :
@@ -510,7 +508,8 @@ void variableDeclaratorId() :
 
 void objectDeclaratorId() :
 {}
-{    LOOKAHEAD(3) < MINOR > <ID> < MAJOR > variableDeclaratorId1() < ID >
+{
+    LOOKAHEAD(3) < MINOR > <ID> < MAJOR > variableDeclaratorId1() < ID >
     | < MINOR > <ID> <COMMA > <ID> < MAJOR > variableDeclaratorId1() < ID >
 }
 
@@ -1054,7 +1053,7 @@ void expression() :
 void assignmentExpression() :
 {}
 {
-	assignment() | conditionalExpression()
+	LOOKAHEAD(3) conditionalExpression() | assignment()/* TODO rimettere l'assignment*/
 }
 
 void assignment() :
@@ -1072,7 +1071,7 @@ void leftHandSide() :
 void assignmentOperator() :
 {}
 {
-	< MULASS > | < DIVASS > | < ADDASS > | < SUBASS > 
+	< MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
 }
 
 void conditionalExpression() :
@@ -1157,13 +1156,17 @@ void equalityExpression1():
 void relationalExpression() :
 {}
 {
-	 relationalExpression1() 
+	additiveExpression() relationalExpression1()
 }
 
-void relationalExpression1():
+void relationalExpression1() :
 {}
 {
-  <INSTANCEOF> referenceType() relationalExpression1() | { }
+	<MAJOR> additiveExpression() relationalExpression1()
+	| <MINOR> additiveExpression() relationalExpression1()
+	| <RELOP> additiveExpression() relationalExpression1()
+	| <INSTANCEOF> referenceType() relationalExpression1()
+	| {}
 }
 
 void additiveExpression() :
@@ -1199,7 +1202,7 @@ void castExpression() :
 void unaryExpression() :
 {}
 {
-	 LOOKAHEAD(3) preIncrDecrExpression() |  LOOKAHEAD(3) < ARITOP_LP > unaryExpression() | <ARITOP_LP> unaryExpression() // | unaryExpressionNotPlusMinus()
+	 LOOKAHEAD(3) primary() | LOOKAHEAD(3) expressionName() | LOOKAHEAD(3) preIncrDecrExpression() |  LOOKAHEAD(3) < ARITOP_LP > unaryExpression() | <ARITOP_LP> unaryExpression() // | unaryExpressionNotPlusMinus()
 }
 
 void preIncrDecrExpression() :
@@ -1249,7 +1252,12 @@ void primary() :
 void primaryNoNewArray() :
 {}
 {
-	<LITERAL> | <THIS> | <PARTA> expression() <PARTC> | classInstanceCreationExpression() /* | fieldAccess()| methodInvocation() */  | arrayAccess()
+	LOOKAHEAD(2) arrayAccess()
+	| LOOKAHEAD(2) <THIS> <DOT> expressionName()
+	| <THIS>
+	| <PARTA> expression() <PARTC>
+	| classInstanceCreationExpression() /* | fieldAccess() | methodInvocation() */
+	| literal()
 }
 
 void classInstanceCreationExpression() :
@@ -1345,7 +1353,8 @@ void expressionName():
 {}
 {
 
-	LOOKAHEAD(2) < ID > | ambiguousName() < DOT > < ID > 
+	LOOKAHEAD(2) ambiguousName()
+	| < ID >
 
 }
 
@@ -1360,191 +1369,23 @@ void methodName():
 void ambiguousName():
 {}
 {
-
-	< ID > ambiguousName1() 
-
+	< ID > ambiguousName1()
 }
 
 
 void ambiguousName1():
 {}
 {
-
 	< DOT > < ID > ambiguousName1() | {}
-	
-
 }
 
 
 void literal():
 {}
 {
-
-	LOOKAHEAD(2) integerLiteral() | floatingpointLiteral() | booleanLiteral()
-	| characterLiteral() | stringLiteral() | nullLiteral()
-
-}
-
-void integerLiteral(): 
-{}
-{
-
-	decimalIntegerLiteral()
-
-}
-
-void decimalIntegerLiteral(): 
-{}
-{
-
-	decimalNumeral() integerTypeSuffix() | {}
-}
-
-void integerTypeSuffix(): 
-{}
-{
-
-	< DIGITS > | < ID >
-	//"1" | "L"
-}
-
-void decimalNumeral():
-{}
-{
-	< DIGITS >
-	//"0" | nonZeroDigit() (< DIGITS >)?
-
-}
-
-void nonZeroDigit():
-{}
-{
-	< DIGITS >
-	//"1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-
-}
-
-void hexDigit():
-{}
-{
-	< DIGITS > | < ID >
-	 //"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F"  
-
-}
-
-void floatingpointLiteral():
-{}
-{
-	/* 	digits() < DOT > (digits())? (exponentPart())? (floatTypeSuffix())? < DIGITS > (exponentPart())? (floatTypeSuffix())? */
-	< DIGITS > < DOT > <DIGITS> exponentPart() (floatTypeSuffix())?
-}
-
-
-void exponentPart():
-{}
-{
-
-	exponentIndicator() signedInteger()
-
-}
-
-void exponentIndicator():
-{}
-{
-	< ID >
-	//"e" | "E"
-
-}
-
-void signedInteger():
-{}
-{
-
-	(sign())? < DIGITS >
-
-}
-
-void sign():
-{}
-{
-	< ARITOP_LP >
-	//"+" | "-"
-}
-
-void floatTypeSuffix():
-{}
-{
-	< ID >
-	//"f" | "F" | "d" | "D"
-
-}
-
-void booleanLiteral():
-{}
-{
-
-	< TRUE > | < FALSE >
-
-}
-
-void characterLiteral():
-{}
-{
-
-	< APEX > singleCharacter() < APEX >
-	
-}
-
-void singleCharacter():
-{}
-{
-
-	< INPUT_CHAR >
-	
-}
-
-
-void stringLiteral():
-{}
-{
-
-	< DAPEX >(stringCharacters())? < DAPEX >
-		
-}
-
-void stringCharacters():
-{}
-{
-
-	stringCharacter() stringCharacters1() 
-		
-}
-
-
-
-void stringCharacters1():
-{}
-{
-
-	stringCharacter()stringCharacters1() | {}
-		
-}
-
-
-
-void stringCharacter():
-{}
-{
-
-	< INPUT_CHAR >
-	
-}
-
-
-void nullLiteral():
-{}
-{
-
-	< NULL >
-	
+	(< TRUE > | < FALSE >)
+	| <CHARVALUE>
+	| <LITERAL>
+	| < NUM >
+	| < NULL >
 }

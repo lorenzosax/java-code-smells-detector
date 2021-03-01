@@ -7,13 +7,26 @@ import java.io.*;
 public class Example implements ExampleParent, ExampleParent1 {
 	
 	private HashMap<String, String> hashMap;
-	private int count;	
+	private int count;
 	private Example(int x) {int x;}
 	
 	private int getCount() throws PeccaException {
-		return count;
+		switch (s) {
+			case p:
+				int i;
+				break;
+			default:
+				int i;
+		}
+
+		int i = 0;
+
+		return this.ss.ss;
+		return ss;
+		return true;
+		return this;
 	}
-	
+
 	public static void main (String[] args) {
 		Example e;
 		//Example e1 = new Example();
