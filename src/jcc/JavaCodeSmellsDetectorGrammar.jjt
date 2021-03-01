@@ -224,14 +224,14 @@ TOKEN :
   | < NOT : "!" >
   | < AND : "&&" >
   | < OR : "||" >
+  | < MAJOR : ">" >
+  | < MINOR : "<" >
   | < RELOP :
     (
       "<="
     | "=="
     | "!="
     | ">="
-    | "<"
-    | ">"
     ) >
 }
 
@@ -265,7 +265,7 @@ void packageName() :
 void packageName1() :
 {}
 {
-  <DOT> (<ID> | < ARITOP_HP > <SEMIC >)  packageName1() | {}
+  <DOT> (<ID> | < ARITOP_HP >) packageName1() | {}
 }
 
 void importDeclarations() :
@@ -283,19 +283,7 @@ void importDeclarations1() :
 void importDeclaration() :
 {}
 {
-  LOOKAHEAD(3) singleTypeImportDeclaration() | typeImportOnDemandDeclaration()
-}
-
-void singleTypeImportDeclaration() :
-{}
-{
-  <IMPORT> typeName() < SEMIC >
-}
-
-void typeImportOnDemandDeclaration() :
-{}
-{
-  <IMPORT> packageName() 
+  <IMPORT> packageName() < SEMIC >
 }
 
 void superConstruct():
@@ -385,13 +373,13 @@ void classBodyDeclarations1() :
 void classBodyDeclaration() :
 {}
 {
-  LOOKAHEAD(3) classMemberDeclaration() | constructorDeclaration() | staticInitializer()
+  LOOKAHEAD(4) constructorDeclaration() | LOOKAHEAD(4) classMemberDeclaration() | staticInitializer()
 }
 
 void classMemberDeclaration() :
 {}
 {
-  LOOKAHEAD(3) fieldDeclaration() | methodDeclaration()
+  LOOKAHEAD(4) fieldDeclaration() | methodDeclaration()
 }
 
 void staticInitializer() :
@@ -403,31 +391,19 @@ void staticInitializer() :
 void constructorDeclaration() :
 {}
 {
-  (constructorModifiers())? constructorDeclarator() (throwsConstruct())? constructorBody()
-}
-
-void constructorModifiers() :
-{}
-{
-  constructorModifier() constructorModifiers1()
-}
-
-void constructorModifiers1() :
-{}
-{
-  constructorModifier() constructorModifiers1() | {}
+  (constructorModifier())? constructorDeclarator() (throwsConstruct())? constructorBody()
 }
 
 void constructorModifier() :
 {}
 {
-  < PUBLIC > < PROTECTED > < PRIVATE >
+  < PUBLIC > | < PROTECTED > | < PRIVATE >
 }
 
 void constructorDeclarator():
 {}
 {
-  simpleTypeName() (formalParameterList())?
+  simpleTypeName() < PARTA > (formalParameterList())? < PARTC >
 }
 
 void formalParameterList() :
@@ -469,11 +445,11 @@ void classTypeList1() :
 void constructorBody() :
 {}
 {
-  /*< PARGA > (explicitConstructorInvocation())? (blockStatements())?*/
-  LOOKAHEAD(2) < PARGA >
-  | LOOKAHEAD(2) < PARGA > explicitConstructorInvocation()
-  | LOOKAHEAD(2) < PARGA > blockStatements()
-  | < PARGA > explicitConstructorInvocation() blockStatements()
+  /*< PARGA > (explicitConstructorInvocation())? (blockStatements())? < PARGC >*/
+  LOOKAHEAD(2) < PARGA > < PARGC >
+  | LOOKAHEAD(2) < PARGA > explicitConstructorInvocation() < PARGC >
+  | LOOKAHEAD(2) < PARGA > blockStatements() < PARGC >
+  | < PARGA > explicitConstructorInvocation() blockStatements() < PARGC >
 }
 
 void explicitConstructorInvocation() :
@@ -528,6 +504,14 @@ void variableDeclaratorId() :
 {}
 {
   < ID > variableDeclaratorId1()
+  | objectDeclaratorId()
+}
+
+
+void objectDeclaratorId() :
+{}
+{    LOOKAHEAD(3) < MINOR > <ID> < MAJOR > variableDeclaratorId1() < ID >
+    | < MINOR > <ID> <COMMA > <ID> < MAJOR > variableDeclaratorId1() < ID >
 }
 
 void variableDeclaratorId1() :
@@ -557,7 +541,7 @@ void methodHeader() :
 void resultType() :
 {}
 {
-  type() | < VOID >
+  < VOID > | type() 
 }
 
 void methodModifiers() :
@@ -704,11 +688,10 @@ void variableInitializers1() :
   < COMMA > variableInitializer() variableInitializers1() | {}
 }
 
-/* --------------------- DA TESTARE -------------------------------*/
 void type() :
 {}
 {
-	(primitiveType() | classOrInterfaceType()) type1() 
+  (primitiveType() | classOrInterfaceType()) type1() 
 }
 
 void type1():
@@ -720,20 +703,15 @@ void type1():
 void primitiveType() :
 {}
 {
- numericType() | < BOOLEAN >
+ < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | < BOOLEAN >
 }
 
 void numericType():
 {}
 {
-  integralType() | floatingPointType()
+  < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | floatingPointType()
 }
 
-void integralType():
-{}
-{
-  < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR >
-}
   
 void floatingPointType():
 {}
@@ -764,12 +742,6 @@ void interfaceType():
 {
   typeName()
 }
-/*
-void arrayType():
-{}
-{
-  type() < PARQA > < PARQC >
-}*/
 
 void block():
 {}
@@ -1170,8 +1142,6 @@ void andExpression1():
   <AND> equalityExpression() andExpression1() | { }
 }
 
-
-
 void equalityExpression() :
 {}
 {
@@ -1181,7 +1151,7 @@ void equalityExpression() :
 void equalityExpression1():
 {}
 {
-  <RELOP> relationalExpression() equalityExpression1() | { }
+  (<MAJOR> | <MINOR> | <RELOP>) relationalExpression() equalityExpression1() | { }
 }
 
 void relationalExpression() :
@@ -1353,8 +1323,15 @@ void arrayAccess() :
 void typeName():
 {}
 {
-   LOOKAHEAD(2) <ID> | packageName() <DOT> <ID>
-}  
+   <ID> typeName1() 
+}
+
+void typeName1():
+{}
+{
+  <COMMA> <ID> typeName1() | {}
+}
+
 
 void simpleTypeName():
 {}
