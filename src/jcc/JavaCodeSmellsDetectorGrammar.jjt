@@ -1205,7 +1205,9 @@ void multiplicativeExpression1():
 void castExpression() :
 {}
 {
-  <PARTA> type() <PARTC> unaryExpression()
+	LOOKAHEAD(2) <PARTA> type() <PARTC> unaryExpression()
+	| <PARTA> <PARTA> type() <PARTC> unaryExpression()
+	 /*| <PARTA> referenceType() <PARTC> unaryExpression()*/
 }
 
 void unaryExpression() :
@@ -1215,11 +1217,13 @@ void unaryExpression() :
 	 | LOOKAHEAD(5) <ID> <DOT> <CLASS>
 	 | LOOKAHEAD(3) castExpression()
 	 | LOOKAHEAD(3) primary()
+	 | LOOKAHEAD(4) expressionName() <PARTC> < DOT > <ID > <PARTA > (argumentList())? <PARTC> (< DOT > unaryExpression())?
 	 | LOOKAHEAD(3) expressionName()
 	 | LOOKAHEAD(3) preIncrDecrExpression()
 	 | LOOKAHEAD(3) < ARITOP_LP > unaryExpression()
 	 | < NOT > unaryExpression()
 }
+
 
 void preIncrDecrExpression() :
 {}
