@@ -287,7 +287,7 @@ void importDeclaration() :
 void superConstruct():
 {}
 {
-  < EXTENDS > classType()
+  < EXTENDS > classOrInterfaceType()
 }
 
 void interfaces():
@@ -299,13 +299,13 @@ void interfaces():
 void interfaceTypeList() :
 {}
 {
-  interfaceType() interfaceTypeList1()
+  classOrInterfaceType() interfaceTypeList1()
 }
 
 void interfaceTypeList1() :
 {}
 {
-  < COMMA > interfaceType() interfaceTypeList1() | {}
+  < COMMA > classOrInterfaceType() interfaceTypeList1() | {}
 }
 
 void typeDeclarations() :
@@ -431,13 +431,13 @@ void throwsConstruct() :
 void classTypeList() :
 {}
 {
-  classType() classTypeList1()  
+  classOrInterfaceType() classTypeList1()
 }
 
 void classTypeList1() :
 {}
 {
-  < COMMA > classType() classTypeList1() | {}
+  < COMMA > classOrInterfaceType() classTypeList1() | {}
 }
 
 void constructorBody() :
@@ -483,7 +483,7 @@ void fieldModifier() :
 void variableDeclarators() :
 {}
 {
-  variableDeclarator() variableDeclarators1() 
+  variableDeclarator() variableDeclarators1()
 }
 
 void variableDeclarators1() :
@@ -495,7 +495,8 @@ void variableDeclarators1() :
 void variableDeclarator() :
 {}
 {
-  LOOKAHEAD(3) variableDeclaratorId() | variableDeclaratorId() < ASS > variableInitializer()
+  LOOKAHEAD(7) variableDeclaratorId() < ASS > variableInitializer()
+  | variableDeclaratorId()
 }
 
 void variableDeclaratorId() :
@@ -540,7 +541,7 @@ void methodHeader() :
 void resultType() :
 {}
 {
-  < VOID > | type() 
+  < VOID > | type()
 }
 
 void methodModifiers() :
@@ -564,7 +565,7 @@ void methodModifier() :
 void methodDeclarator() :
 {}
 {
-  < ID > < PARTA > (formalParameterList())? < PARTC > 
+  < ID > < PARTA > (formalParameterList())? < PARTC >
 }
 
 void methodBody() :
@@ -600,13 +601,13 @@ void interfaceModifier() :
 void extendsInterfaces() :
 {}
 {
-  < EXTENDS > interfaceType() extendsInterfaces1() 
+  < EXTENDS > classOrInterfaceType() extendsInterfaces1()
 }
 
 void extendsInterfaces1() :
 {}
 {
-  < COMMA > interfaceType() extendsInterfaces1() | {}
+  < COMMA > classOrInterfaceType() extendsInterfaces1() | {}
 }
 
 void interfaceBody() :
@@ -678,7 +679,7 @@ void arrayInitializer() :
 void variableInitializers() :
 {}
 {
-  variableInitializer() variableInitializers1() 
+  variableInitializer() variableInitializers1()
 }
 
 void variableInitializers1() :
@@ -711,25 +712,29 @@ void numericType():
   < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | floatingPointType()
 }
 
-  
+
 void floatingPointType():
 {}
 {
-  < FLOAT > | < DOUBLE > 
+  < FLOAT > | < DOUBLE >
 }
 
 void referenceType():
 {}
 {
-   LOOKAHEAD(3) classOrInterfaceType() |  type() < PARQA > < PARQC >
+   LOOKAHEAD(3) classOrInterfaceType() | type() < PARQA > < PARQC >
 }
 
 void classOrInterfaceType():
 {}
 {
-   LOOKAHEAD(3) classType() | interfaceType()
+   /*LOOKAHEAD(3) classType() | interfaceType()*/
+   LOOKAHEAD(4) <ID> <MINOR> <ID> <MAJOR>
+   | LOOKAHEAD(2) <ID> <MINOR> <ID> <COMMA> <ID> <MAJOR>
+   | <ID>
 }
 
+/*
 void classType():
 {}
 {
@@ -740,7 +745,7 @@ void interfaceType():
 {}
 {
   typeName()
-}
+}*/
 
 void block():
 {}
@@ -752,7 +757,7 @@ void block():
 void blockStatements():
 {}
 {
-  blockStatement() blockStatements1() 
+  blockStatement() blockStatements1()
 }
 
 void blockStatements1():
@@ -798,7 +803,7 @@ void statementNoShortIf():
 	| labeledStatementNoShortIf()
 	| ifThenElseStatementNoShortIf()
 	| whileStatementNoShortIf()
-	| forStatementNoShortIf() 
+	| forStatementNoShortIf()
 }
 
 void statementWithoutTrailingSubstatement():
@@ -848,7 +853,7 @@ void statementExpression():
 	| LOOKAHEAD(4) {System.out.println("methodInvocation");} methodInvocation()
 	| {System.out.println("postIncrDecrExpression");} postIncrDecrExpression()
 	| {System.out.println("preIncrDecrExpression");} preIncrDecrExpression()
-	| {System.out.println("classInstanceCreationExpression");} classInstanceCreationExpression()
+	| {System.out.println("assignmenclassInstanceCreationExpression");} classInstanceCreationExpression()
 }
 
 void ifThenStatement():
@@ -889,7 +894,7 @@ void switchBlock():
 void switchBlockStatementGroups():
 {}
 {
-	switchBlockStatementGroup() switchBlockStatementGroups1() 
+	switchBlockStatementGroup() switchBlockStatementGroups1()
 }
 
 void switchBlockStatementGroups1():
@@ -907,7 +912,7 @@ void switchBlockStatementGroup():
 void switchLabels():
 {}
 {
-	switchLabel() switchLabels1() 
+	switchLabel() switchLabels1()
 }
 
 void switchLabels1():
@@ -916,7 +921,7 @@ void switchLabels1():
 	switchLabel() switchLabels1() | { }
 }
 
-void switchLabel(): 
+void switchLabel():
 {}
 {
   < CASE > constantExpression() < DPOINTS >
@@ -926,13 +931,13 @@ void switchLabel():
 void whileStatement():
 {}
 {
-  < WHILE > <PARTA > expression() < PARTC > statement() 
+  < WHILE > <PARTA > expression() < PARTC > statement()
 }
 
 void whileStatementNoShortIf():
 {}
 {
-  < WHILE > <PARTA > expression() < PARTC > statementNoShortIf() 
+  < WHILE > <PARTA > expression() < PARTC > statementNoShortIf()
 }
 
 
@@ -952,26 +957,26 @@ void forStatement():
 void forStatementNoShortIf():
 {}
 {
-  < FOR > <PARTA > forInit() < SEMIC > expression()  < SEMIC > forUpdate() < PARTC > statementNoShortIf() 
+  < FOR > <PARTA > forInit() < SEMIC > expression()  < SEMIC > forUpdate() < PARTC > statementNoShortIf()
 }
 
 void forInit():
 {}
 {
   	 LOOKAHEAD(3) statementExpressionList()
-	| localVariableDeclaration()	 
+	| localVariableDeclaration()
 }
 
 void forUpdate():
 {}
 {
-  	statementExpressionList() 
+  	statementExpressionList()
 }
 
 void statementExpressionList():
 {}
 {
-  	statementExpression() statementExpressionList1() 
+  	statementExpression() statementExpressionList1()
 }
 
 void statementExpressionList1():
@@ -1019,7 +1024,7 @@ void tryStatement():
 void catches():
 {}
 {
-  	catchClause() catches1() 
+  	catchClause() catches1()
 }
 
 void catches1():
@@ -1082,20 +1087,13 @@ void assignmentOperator() :
 void conditionalExpression() :
 {}
 {
-	 LOOKAHEAD(3) conditionalOrExpression()
-	 | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
-}
-
-void ternaryStatement():
-{}
-{
-	conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
+	 LOOKAHEAD(3) conditionalOrExpression() | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
 }
 
 void conditionalOrExpression() :
 {}
 {
-	conditionalAndExpression() conditionalOrExpression1() 
+	conditionalAndExpression() conditionalOrExpression1()
 }
 
 void conditionalOrExpression1():
@@ -1107,7 +1105,7 @@ void conditionalOrExpression1():
 void conditionalAndExpression() :
 {}
 {
-	inclusiveOrExpression() conditionalAndExpression1() 
+	inclusiveOrExpression() conditionalAndExpression1()
 }
 
 void conditionalAndExpression1():
@@ -1119,7 +1117,7 @@ void conditionalAndExpression1():
 void inclusiveOrExpression() :
 {}
 {
-	exclusiveOrExpression() inclusiveOrExpression1() 
+	exclusiveOrExpression() inclusiveOrExpression1()
 }
 
 void inclusiveOrExpression1():
@@ -1144,7 +1142,7 @@ void exclusiveOrExpression1() :
 void andExpression() :
 {}
 {
-	equalityExpression() andExpression1() 
+	equalityExpression() andExpression1()
 }
 
 void andExpression1():
@@ -1156,7 +1154,7 @@ void andExpression1():
 void equalityExpression() :
 {}
 {
-	relationalExpression() equalityExpression1()  
+	relationalExpression() equalityExpression1()
 }
 
 void equalityExpression1():
@@ -1184,7 +1182,7 @@ void relationalExpression1() :
 void additiveExpression() :
 {}
 {
-	multiplicativeExpression() additiveExpression1() 	
+	multiplicativeExpression() additiveExpression1()
 }
 
 void additiveExpression1():
@@ -1196,7 +1194,7 @@ void additiveExpression1():
 void multiplicativeExpression() :
 {}
 {
-	unaryExpression()  multiplicativeExpression1() 
+	unaryExpression()  multiplicativeExpression1()
 }
 
 void multiplicativeExpression1():
@@ -1281,14 +1279,14 @@ void primaryNoNewArray() :
 void classInstanceCreationExpression() :
 {}
 {
-	LOOKAHEAD(3) <NEW> classType() <PARTA> (argumentList())? <PARTC>
-	| <NEW> classType() <MINOR> (argumentList())? <MAJOR> <PARTA> (argumentList())? <PARTC>
+	LOOKAHEAD(3) <NEW> classOrInterfaceType() <PARTA> (argumentList())? <PARTC>
+	| <NEW> classOrInterfaceType() <MINOR> (argumentList())? <MAJOR> <PARTA> (argumentList())? <PARTC>
 }
 
 void argumentList() :
 {}
 {
-	expression() argumentList1() 
+	expression() argumentList1()
 }
 
 
@@ -1315,7 +1313,7 @@ void dimExprs() :
 void dimExprs1() :
 {}
 {
-	dimExpr()dimExprs1() | {} 
+	dimExpr()dimExprs1() | {}
 }
 
 
@@ -1337,7 +1335,7 @@ void dims1() :
 {
 
    <PARQA> <PARQC> dims1() | {}
-	
+
 }
 
 
@@ -1350,7 +1348,7 @@ void arrayAccess() :
 void typeName():
 {}
 {
-   <ID> typeName1() 
+   <ID> typeName1()
 }
 
 void typeName1():
