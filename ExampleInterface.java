@@ -1,7 +1,4 @@
 
-public interface ExampleInterface implements ExampleInterfaceParent, ExampleParent1 {
+public interface ExampleInterface {
 
-	//public ExampleInterface() {}
-	
-	//private int getExampleAttribute() {}
 }

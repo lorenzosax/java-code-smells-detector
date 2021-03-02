@@ -377,7 +377,7 @@ void classBodyDeclaration() :
 void classMemberDeclaration() :
 {}
 {
-  LOOKAHEAD(7) fieldDeclaration() | methodDeclaration()
+  LOOKAHEAD(9) fieldDeclaration() | methodDeclaration()
 }
 
 void staticInitializer() :
@@ -445,8 +445,8 @@ void constructorBody() :
 {
   /*< PARGA > (explicitConstructorInvocation())? (blockStatements())? < PARGC >*/
   LOOKAHEAD(2) < PARGA > < PARGC >
-  | LOOKAHEAD(3) {System.out.println("seconda reg");} < PARGA > explicitConstructorInvocation() < PARGC >
-  | LOOKAHEAD(3) {System.out.println("consBody block");} < PARGA > blockStatements() < PARGC >
+  | LOOKAHEAD(3) < PARGA > explicitConstructorInvocation() < PARGC >
+  | LOOKAHEAD(3) < PARGA > blockStatements() < PARGC >
   | < PARGA > explicitConstructorInvocation() blockStatements() < PARGC >
 }
 
@@ -697,7 +697,7 @@ void type() :
 void type1():
 {}
 {
-	< PARQA > < PARQC > type1() | { }
+	< PARQA > < PARQC > type1() | {}
 }
 
 void primitiveType() :
@@ -729,9 +729,10 @@ void classOrInterfaceType():
 {}
 {
    /*LOOKAHEAD(3) classType() | interfaceType()*/
-   LOOKAHEAD(4) <ID> <MINOR> <ID> <MAJOR>
-   | LOOKAHEAD(2) <ID> <MINOR> <ID> <COMMA> <ID> <MAJOR>
+   LOOKAHEAD(4) <ID> <MINOR> <ID> <COMMA> <ID> <MAJOR>
+   | LOOKAHEAD(2) <ID> <MINOR> <ID> <MAJOR>
    | <ID>
+ 
 }
 
 /*
@@ -769,8 +770,8 @@ void blockStatements1():
 void blockStatement():
 {}
 {
-	 LOOKAHEAD(3) {System.out.println("localVariableDeclarationStatement");} localVariableDeclarationStatement()
-	 | {System.out.println("statement");} statement()
+	 LOOKAHEAD(3) localVariableDeclarationStatement()
+	 | statement()
 }
 
 void localVariableDeclarationStatement():
@@ -789,7 +790,7 @@ void localVariableDeclaration():
 void statement():
 {}
 {
-	 LOOKAHEAD(2) {System.out.println("statementWithoutTrailingSubstatement");} statementWithoutTrailingSubstatement()
+	 LOOKAHEAD(2) statementWithoutTrailingSubstatement()
 	| labeledStatement()
 	| ifThenStatement()
 	| whileStatement()
@@ -811,7 +812,7 @@ void statementWithoutTrailingSubstatement():
 {
 	block()
 	| emptyStatement()
-	| {System.out.println("expressionStatement");} expressionStatement()
+	| expressionStatement()
 	| switchStatement()
 	| doStatement()
 	| breakStatement()
@@ -849,21 +850,20 @@ void expressionStatement():
 void statementExpression():
 {}
 {
-	LOOKAHEAD(6) {System.out.println("assignment");} assignment()
-	| LOOKAHEAD(4) {System.out.println("methodInvocation");} methodInvocation()
-	| {System.out.println("postIncrDecrExpression");} postIncrDecrExpression()
-	| {System.out.println("preIncrDecrExpression");} preIncrDecrExpression()
-	| {System.out.println("assignmenclassInstanceCreationExpression");} classInstanceCreationExpression()
+	LOOKAHEAD(6) assignment()
+	| LOOKAHEAD(4) methodInvocation()
+	| postIncrDecrExpression()
+	| preIncrDecrExpression()
+	| classInstanceCreationExpression()
 }
 
 void ifThenStatement():
 {}
 {
-	{System.out.println("IF");}
-	< IF > < PARTA > expression() < PARTC > statement() elseStmt()
+  < IF > < PARTA > expression() < PARTC > statement() elseStatement()
 }
 
-void elseStmt():
+void elseStatement():
 {}
 {
 	< ELSE > statement() | {}
@@ -1066,15 +1066,14 @@ void assignmentExpression() :
 void assignment() :
 {}
 {
-	{System.out.println("ASSIGNMENT");}
-	leftHandSide() assignmentOperator() assignmentExpression()
+  leftHandSide() assignmentOperator() assignmentExpression()
 }
 
 void leftHandSide() :
 {}
 {
-	LOOKAHEAD(3) {System.out.println("leftHand fieldAcc");} fieldAccess()
-	| LOOKAHEAD(3) {System.out.println("leftHand expr");} expressionName()
+	LOOKAHEAD(3) fieldAccess()
+	| LOOKAHEAD(3) expressionName()
 	| arrayAccess()
 }
 
@@ -1206,8 +1205,7 @@ void multiplicativeExpression1():
 void castExpression() :
 {}
 {
-	{System.out.println("CAST");}
-	<PARTA> type() <PARTC> unaryExpression() /*| <PARTA> referenceType() <PARTC> unaryExpression()*/
+  <PARTA> type() <PARTC> unaryExpression()
 }
 
 void unaryExpression() :
@@ -1238,8 +1236,8 @@ void postIncrDecrExpression() :
 void methodInvocation() :
 {}
 {
-	 LOOKAHEAD(3) {System.out.println("MethodName e ArgumentL");} methodName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | LOOKAHEAD(3) {System.out.println("KKK");} primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 LOOKAHEAD(3) methodName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | LOOKAHEAD(3) primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
 	 | <THIS> <DOT> ambiguousName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
 	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
 }
@@ -1247,9 +1245,8 @@ void methodInvocation() :
 void methodInvocation1():
 {}
 {
-	{System.out.println("Meth Inv 1");}
-	<DOT> methodInvocation()
-	| {System.out.println("Meth Inv 1 EPS");} {}
+  <DOT> methodInvocation()
+  | {}
 }
 
 
@@ -1269,7 +1266,6 @@ void primaryNoNewArray() :
 {}
 {
 	LOOKAHEAD(2) arrayAccess()
-	/*| LOOKAHEAD(2) {System.out.println("okok");} < THIS > <DOT> expressionName() TODO???*/
 	| < THIS >
 	| <PARTA> expression() <PARTC>
 	| classInstanceCreationExpression() /* | fieldAccess() | methodInvocation() */
