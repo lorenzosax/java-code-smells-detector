@@ -377,7 +377,7 @@ void classBodyDeclaration() :
 void classMemberDeclaration() :
 {}
 {
-  LOOKAHEAD(4) fieldDeclaration() | methodDeclaration()
+  LOOKAHEAD(7) fieldDeclaration() | methodDeclaration()
 }
 
 void staticInitializer() :
@@ -445,15 +445,15 @@ void constructorBody() :
 {
   /*< PARGA > (explicitConstructorInvocation())? (blockStatements())? < PARGC >*/
   LOOKAHEAD(2) < PARGA > < PARGC >
-  | LOOKAHEAD(2) < PARGA > explicitConstructorInvocation() < PARGC >
-  | LOOKAHEAD(2) < PARGA > blockStatements() < PARGC >
+  | LOOKAHEAD(3) {System.out.println("seconda reg");} < PARGA > explicitConstructorInvocation() < PARGC >
+  | LOOKAHEAD(3) {System.out.println("consBody block");} < PARGA > blockStatements() < PARGC >
   | < PARGA > explicitConstructorInvocation() blockStatements() < PARGC >
 }
 
 void explicitConstructorInvocation() :
 {}
 {
-  < THIS > argumentList() | < SUPER > argumentList()
+  < THIS > < PARTA > (argumentList())? < PARTC > | < SUPER > < PARTA > (argumentList())? < PARTC >
 }
 
 void fieldDeclaration() :
@@ -690,7 +690,7 @@ void variableInitializers1() :
 void type() :
 {}
 {
-  (primitiveType() | classOrInterfaceType()) type1() 
+	(primitiveType() | classOrInterfaceType()) type1()
 }
 
 void type1():
@@ -702,7 +702,7 @@ void type1():
 void primitiveType() :
 {}
 {
- < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | < BOOLEAN >
+ < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | < BOOLEAN > | floatingPointType()
 }
 
 void numericType():
@@ -764,7 +764,8 @@ void blockStatements1():
 void blockStatement():
 {}
 {
-	 LOOKAHEAD(3) localVariableDeclarationStatement() | statement()
+	 LOOKAHEAD(3) {System.out.println("localVariableDeclarationStatement");} localVariableDeclarationStatement()
+	 | {System.out.println("statement");} statement()
 }
 
 void localVariableDeclarationStatement():
@@ -783,12 +784,11 @@ void localVariableDeclaration():
 void statement():
 {}
 {
-	 LOOKAHEAD(2) statementWithoutTrailingSubstatement()
+	 LOOKAHEAD(2) {System.out.println("statementWithoutTrailingSubstatement");} statementWithoutTrailingSubstatement()
 	| labeledStatement()
-	|  LOOKAHEAD(3) ifThenStatement()
-	| ifThenElseStatement()
+	| ifThenStatement()
 	| whileStatement()
-	| forStatement() 
+	| forStatement()
 }
 
 void statementNoShortIf():
@@ -806,7 +806,7 @@ void statementWithoutTrailingSubstatement():
 {
 	block()
 	| emptyStatement()
-	| expressionStatement()
+	| {System.out.println("expressionStatement");} expressionStatement()
 	| switchStatement()
 	| doStatement()
 	| breakStatement()
@@ -844,23 +844,24 @@ void expressionStatement():
 void statementExpression():
 {}
 {
-	 LOOKAHEAD(3) assignment()
-	//| postIncrDecrExpression()
-	| preIncrDecrExpression()
-	|  LOOKAHEAD(3) methodInvocation()
-	| classInstanceCreationExpression()
+	LOOKAHEAD(6) {System.out.println("assignment");} assignment()
+	| LOOKAHEAD(4) {System.out.println("methodInvocation");} methodInvocation()
+	| {System.out.println("postIncrDecrExpression");} postIncrDecrExpression()
+	| {System.out.println("preIncrDecrExpression");} preIncrDecrExpression()
+	| {System.out.println("classInstanceCreationExpression");} classInstanceCreationExpression()
 }
 
 void ifThenStatement():
 {}
 {
-	< IF > < PARTA > expression() < PARTC > statement()
+	{System.out.println("IF");}
+	< IF > < PARTA > expression() < PARTC > statement() elseStmt()
 }
 
-void ifThenElseStatement():
+void elseStmt():
 {}
 {
-	< IF > < PARTA > expression() < PARTC > statementNoShortIf() < ELSE > statement()
+	< ELSE > statement() | {}
 }
 
 void ifThenElseStatementNoShortIf():
@@ -944,7 +945,8 @@ void doStatement():
 void forStatement():
 {}
 {
-  < FOR > <PARTA > forInit() < SEMIC > expression()  < SEMIC > forUpdate() < PARTC > statement() 
+  LOOKAHEAD(5) < FOR > < PARTA > forInit() < SEMIC > expression()  < SEMIC > forUpdate() < PARTC > statement()
+  | < FOR > < PARTA > type() < ID > < DPOINTS > expression() < PARTC > statement()
 }
 
 void forStatementNoShortIf():
@@ -1053,19 +1055,22 @@ void expression() :
 void assignmentExpression() :
 {}
 {
-	LOOKAHEAD(3) conditionalExpression() | assignment()/* TODO rimettere l'assignment*/
+	LOOKAHEAD(3) conditionalExpression() | assignment()
 }
 
 void assignment() :
 {}
 {
+	{System.out.println("ASSIGNMENT");}
 	leftHandSide() assignmentOperator() assignmentExpression()
 }
 
 void leftHandSide() :
 {}
 {
-	 LOOKAHEAD(3) expressionName() /*| fieldAccess()*/ | arrayAccess()
+	LOOKAHEAD(3) {System.out.println("leftHand fieldAcc");} fieldAccess()
+	| LOOKAHEAD(3) {System.out.println("leftHand expr");} expressionName()
+	| arrayAccess()
 }
 
 void assignmentOperator() :
@@ -1077,7 +1082,14 @@ void assignmentOperator() :
 void conditionalExpression() :
 {}
 {
-	 LOOKAHEAD(3) conditionalOrExpression() | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
+	 LOOKAHEAD(3) conditionalOrExpression()
+	 | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
+}
+
+void ternaryStatement():
+{}
+{
+	conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
 }
 
 void conditionalOrExpression() :
@@ -1196,13 +1208,21 @@ void multiplicativeExpression1():
 void castExpression() :
 {}
 {
-	<PARTA> primitiveType() <PARTC> unaryExpression() // | <PARTA> referenceType() <PARTC> unaryExpressionNotPlusMinus()
+	{System.out.println("CAST");}
+	<PARTA> type() <PARTC> unaryExpression() /*| <PARTA> referenceType() <PARTC> unaryExpression()*/
 }
 
 void unaryExpression() :
 {}
 {
-	 LOOKAHEAD(3) primary() | LOOKAHEAD(3) expressionName() | LOOKAHEAD(3) preIncrDecrExpression() |  LOOKAHEAD(3) < ARITOP_LP > unaryExpression() | <ARITOP_LP> unaryExpression() // | unaryExpressionNotPlusMinus()
+	 LOOKAHEAD(8) expressionName() <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
+	 | LOOKAHEAD(5) <ID> <DOT> <CLASS>
+	 | LOOKAHEAD(3) castExpression()
+	 | LOOKAHEAD(3) primary()
+	 | LOOKAHEAD(3) expressionName()
+	 | LOOKAHEAD(3) preIncrDecrExpression()
+	 | LOOKAHEAD(3) < ARITOP_LP > unaryExpression()
+	 | < NOT > unaryExpression()
 }
 
 void preIncrDecrExpression() :
@@ -1211,38 +1231,36 @@ void preIncrDecrExpression() :
 	<ARITOP_LP> <ARITOP_LP> unaryExpression()
 }
 
-/*
-void unaryExpressionNotPlusMinus() :
-{}
-{
-	postfixExpression() | <NOT> unaryExpression() | castExpression()
-}
-
 void postIncrDecrExpression() :
 {}
 {
-	primary() | expressionName() | postIncrDecrExpression() <ARITOP_LP> <ARITOP_LP>
+	expressionName() <ARITOP_LP> <ARITOP_LP>
 }
-
-void postfixExpression() :
-{}
-{
-	primary() | expressionName()| postIncrDecrExpression()
-}
-*/
 
 void methodInvocation() :
 {}
 {
-	 LOOKAHEAD(3) methodName() <PARTA> argumentList() <PARTC> | LOOKAHEAD(3) primary() <DOT> <ID> <PARTA> argumentList() <PARTC> | <SUPER> <DOT> <ID> <PARTA> argumentList() <PARTC>
+	 LOOKAHEAD(3) {System.out.println("MethodName e ArgumentL");} methodName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | LOOKAHEAD(3) {System.out.println("KKK");} primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <THIS> <DOT> ambiguousName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
 }
-/*
+
+void methodInvocation1():
+{}
+{
+	{System.out.println("Meth Inv 1");}
+	<DOT> methodInvocation()
+	| {System.out.println("Meth Inv 1 EPS");} {}
+}
+
+
 void fieldAccess() :
 {}
 {
-	primary() <DOT> <ID> | <SUPER> <DOT> <ID>
+	< THIS > < DOT > < ID > | < SUPER > < DOT > < ID >
 }
-*/
+
 void primary() :
 {}
 {
@@ -1253,8 +1271,8 @@ void primaryNoNewArray() :
 {}
 {
 	LOOKAHEAD(2) arrayAccess()
-	| LOOKAHEAD(2) <THIS> <DOT> expressionName()
-	| <THIS>
+	/*| LOOKAHEAD(2) {System.out.println("okok");} < THIS > <DOT> expressionName() TODO???*/
+	| < THIS >
 	| <PARTA> expression() <PARTC>
 	| classInstanceCreationExpression() /* | fieldAccess() | methodInvocation() */
 	| literal()
@@ -1263,7 +1281,8 @@ void primaryNoNewArray() :
 void classInstanceCreationExpression() :
 {}
 {
-	<NEW> classType() <PARTA> argumentList() <PARTC>
+	LOOKAHEAD(3) <NEW> classType() <PARTA> (argumentList())? <PARTC>
+	| <NEW> classType() <MINOR> (argumentList())? <MAJOR> <PARTA> (argumentList())? <PARTC>
 }
 
 void argumentList() :
@@ -1344,26 +1363,19 @@ void typeName1():
 void simpleTypeName():
 {}
 {
-
    <ID>
-  
 }
 
 void expressionName():
 {}
 {
-
-	LOOKAHEAD(2) ambiguousName()
-	| < ID >
-
+	ambiguousName()
 }
 
 void methodName():
 {}
 {
-
-	LOOKAHEAD(2) < ID > | ambiguousName() < DOT > < ID > 
-
+	ambiguousName()
 } 
 
 void ambiguousName():
