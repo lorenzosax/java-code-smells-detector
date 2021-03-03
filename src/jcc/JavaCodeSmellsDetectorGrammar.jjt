@@ -445,7 +445,7 @@ void constructorBody() :
 {
   /*< PARGA > (explicitConstructorInvocation())? (blockStatements())? < PARGC >*/
   LOOKAHEAD(2) < PARGA > < PARGC >
-  | LOOKAHEAD(3) < PARGA > explicitConstructorInvocation() < PARGC >
+  | LOOKAHEAD(3) < PARGA > explicitConstructorInvocation() blockStatements() < PARGC >
   | LOOKAHEAD(3) < PARGA > blockStatements() < PARGC >
   | < PARGA > explicitConstructorInvocation() blockStatements() < PARGC >
 }
@@ -731,7 +731,7 @@ void classOrInterfaceType():
    /*LOOKAHEAD(3) classType() | interfaceType()*/
    LOOKAHEAD(4) <ID> <MINOR> <ID> <COMMA> <ID> <MAJOR>
    | LOOKAHEAD(2) <ID> <MINOR> <ID> <MAJOR>
-   | <ID>
+   | < ID >
  
 }
 
