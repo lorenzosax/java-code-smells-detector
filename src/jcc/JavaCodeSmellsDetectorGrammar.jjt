@@ -29,20 +29,7 @@ public class JavaCodeSmellsDetector
     {
       System.out.println("Oops.");
       System.out.println(e.getMessage());
-    }
-
-    /*JavaCodeSmellsDetectorTokenManager jcsd;
-	Token t;
-	SimpleCharStream scs = new SimpleCharStream(new FileInputStream("Process.java"));
-
-	jcsd = new JavaCodeSmellsDetectorTokenManager(scs);
-	t = jcsd.getNextToken();
-
-	while(t.kind != JavaCodeSmellsDetectorConstants.EOF) {
-		System.out.println(t.kind + ": " + t.image);
-		t = jcsd.getNextToken();
-	}*/
-	
+    }	
   }
 }
 
@@ -242,7 +229,7 @@ TOKEN :
 SimpleNode compilationUnit() :
 {}
 {
-	(packageDeclaration())? (importDeclarations())? (typeDeclarations())? < EOF >
+	(packageDeclaration())? (importDeclarations())? (typeDeclarations())? <EOF>
 	{
 	  return jjtThis;
 	}
@@ -254,25 +241,25 @@ void packageDeclaration() :
   < PACKAGE > packageName() < SEMIC >
 }
 
-void packageName() :
+void packageName() #void :
 {}
 {
   <ID> packageName1()
 }
 
-void packageName1() :
+void packageName1() #void:
 {}
 {
   <DOT> (<ID> | < ARITOP_HP >) packageName1() | {}
 }
 
-void importDeclarations() :
+void importDeclarations() #void:
 {}
 {
   importDeclaration() importDeclarations1()
 }
 
-void importDeclarations1() :
+void importDeclarations1() #void :
 {}
 {
   importDeclaration() importDeclarations1() | {}
@@ -284,6 +271,48 @@ void importDeclaration() :
   <IMPORT> packageName() < SEMIC >
 }
 
+void typeDeclarations() #void :
+{}
+{
+  typeDeclaration() typeDeclarations1() 
+}
+
+void typeDeclarations1() #void :
+{}
+{
+  typeDeclaration() typeDeclarations1() | { }
+}
+
+void typeDeclaration() #void :
+{}
+{
+  LOOKAHEAD(3) classDeclaration() | interfaceDeclaration() | < SEMIC >
+}
+
+void classDeclaration() :
+{}
+{
+  (classOrInterfaceModifiers())? < CLASS > < ID > (extendsList())? (interfaces())? classBody()
+}
+
+void classOrInterfaceModifiers() #void:
+{}
+{
+  classOrInterfaceModifier() classOrInterfaceModifiers1()
+}
+
+void classOrInterfaceModifiers1() #void:
+{}
+{
+  classOrInterfaceModifier() classOrInterfaceModifiers1() | {}
+}
+
+void classOrInterfaceModifier() #void :
+{}
+{
+  < PUBLIC > | < ABSTRACT > | < FINAL >
+}
+
 void superConstruct():
 {}
 {
@@ -293,61 +322,51 @@ void superConstruct():
 void interfaces():
 {}
 {
-  < IMPLEMENTS > interfaceTypeList()
+  < IMPLEMENTS > classOrInterfaceType()
 }
 
-void interfaceTypeList() :
+void interfaceDeclaration() :
 {}
 {
-  classOrInterfaceType() interfaceTypeList1()
+  (classOrInterfaceModifiers())? < INTERFACE > < ID > (extendsList())? //interfaceBody()
 }
 
-void interfaceTypeList1() :
+void extendsList() :
 {}
 {
-  < COMMA > classOrInterfaceType() interfaceTypeList1() | {}
+  < EXTENDS > classOrInterfaceType() extendsList1()
 }
 
-void typeDeclarations() :
+void extendsList1() #void:
 {}
 {
-  typeDeclaration() typeDeclarations1() 
+  < COMMA > classOrInterfaceType() extendsList1() | {}
 }
 
-void typeDeclarations1() :
+void objectType() #void:
 {}
 {
-  typeDeclaration() typeDeclarations1() | { }
+   < ID > classOrInterfaceType1()
 }
 
-void typeDeclaration() :
+void classOrInterfaceType() :
 {}
 {
-  LOOKAHEAD(3) classDeclaration() | interfaceDeclaration() | < SEMIC >
+   < ID > classOrInterfaceType1()
 }
 
-void classDeclaration() :
+void classOrInterfaceType1() #void:
 {}
 {
-  (classModifiers())? < CLASS > < ID > (superConstruct())? (interfaces())? classBody()
+   <MINOR> <ID> classOrInterfaceType2()
+   | { }
 }
 
-void classModifiers() :
+void classOrInterfaceType2() #void:
 {}
 {
-  classModifier() classModifiers1()
-}
-
-void classModifiers1() :
-{}
-{
-  classModifier() classModifiers1() | {}
-}
-
-void classModifier() :
-{}
-{
-  < PUBLIC > | < ABSTRACT > | < FINAL >
+   <COMMA> <ID> <MAJOR>
+   | <MAJOR>
 }
 
 void classBody() :
@@ -356,104 +375,31 @@ void classBody() :
   < PARGA > (classBodyDeclarations())? < PARGC >
 }
 
-void classBodyDeclarations() :
+void classBodyDeclarations() #void :
 {}
 {
    classBodyDeclaration() classBodyDeclarations1()  
 }
 
-void classBodyDeclarations1() :
+void classBodyDeclarations1() #void :
 {}
 {
   classBodyDeclaration() classBodyDeclarations1() | {}
 }
 
-void classBodyDeclaration() :
+void classBodyDeclaration() #void:
 {}
 {
-  LOOKAHEAD(4) constructorDeclaration() | LOOKAHEAD(4) classMemberDeclaration() | staticInitializer()
+ /* LOOKAHEAD(4)*/ constructorDeclaration()
+ // | classMemberDeclaration()
 }
+
 
 void classMemberDeclaration() :
 {}
 {
-  LOOKAHEAD(9) fieldDeclaration() | methodDeclaration()
-}
-
-void staticInitializer() :
-{}
-{
-  < STATIC > block()
-}
-
-void constructorDeclaration() :
-{}
-{
-  (constructorModifier())? constructorDeclarator() (throwsConstruct())? constructorBody()
-}
-
-void constructorModifier() :
-{}
-{
-  < PUBLIC > | < PROTECTED > | < PRIVATE >
-}
-
-void constructorDeclarator():
-{}
-{
-  simpleTypeName() < PARTA > (formalParameterList())? < PARTC >
-}
-
-void formalParameterList() :
-{}
-{
-  formalParameter() formalParameterList1()
-}
-
-void formalParameterList1() :
-{}
-{
-  < COMMA > formalParameter() formalParameterList1() | {}
-}
-
-void formalParameter() :
-{}
-{
-  type() variableDeclaratorId()
-}
-
-void throwsConstruct() :
-{}
-{
-  < THROWS > classTypeList()
-}
-
-void classTypeList() :
-{}
-{
-  classOrInterfaceType() classTypeList1()
-}
-
-void classTypeList1() :
-{}
-{
-  < COMMA > classOrInterfaceType() classTypeList1() | {}
-}
-
-void constructorBody() :
-{}
-{
-  /*< PARGA > (explicitConstructorInvocation())? (blockStatements())? < PARGC >*/
-  LOOKAHEAD(2) < PARGA > < PARGC >
-  | LOOKAHEAD(3) < PARGA > explicitConstructorInvocation() blockStatements() < PARGC >
-  | LOOKAHEAD(3) < PARGA > blockStatements() < PARGC >
-  | < PARGA > explicitConstructorInvocation() blockStatements() < PARGC >
-}
-
-void explicitConstructorInvocation() :
-{}
-{
-  < THIS > < PARTA > (argumentList())? < PARTC > | < SUPER > < PARTA > (argumentList())? < PARTC >
+  /*LOOKAHEAD(9)*/ fieldDeclaration()
+  //| methodDeclaration()
 }
 
 void fieldDeclaration() :
@@ -480,194 +426,35 @@ void fieldModifier() :
   < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < FINAL > | < TRANSIENT > | < VOLATILE >
 }
 
-void variableDeclarators() :
+void variableDeclarators() #void :
 {}
 {
   variableDeclarator() variableDeclarators1()
 }
 
-void variableDeclarators1() :
+void variableDeclarators1() #void :
 {}
 {
   < COMMA > variableDeclarator() variableDeclarators1() | {}
 }
 
-void variableDeclarator() :
+void variableDeclarator() #void :
 {}
 {
-  LOOKAHEAD(7) variableDeclaratorId() < ASS > variableInitializer()
-  | variableDeclaratorId()
+  variableDeclaratorId() variableDeclarator1()
 }
 
-void variableDeclaratorId() :
+void variableDeclarator1() #void :
 {}
 {
-  < ID > variableDeclaratorId1()
-  | objectDeclaratorId()
-}
-
-
-void objectDeclaratorId() :
-{}
-{
-    LOOKAHEAD(3) < MINOR > <ID> < MAJOR > variableDeclaratorId1() < ID >
-    | < MINOR > <ID> <COMMA > <ID> < MAJOR > variableDeclaratorId1() < ID >
-}
-
-void variableDeclaratorId1() :
-{}
-{
-  < PARQA > < PARQC > variableDeclaratorId() | {}
+  < ASS > variableInitializer()
+  | { }
 }
 
 void variableInitializer() :
 {}
 {
   arrayInitializer() | expression()
-}
-
-void methodDeclaration() :
-{}
-{
-  methodHeader() methodBody()
-}
-
-void methodHeader() :
-{}
-{
-  (methodModifiers())? resultType() methodDeclarator() (throwsConstruct())?
-}
-
-void resultType() :
-{}
-{
-  < VOID > | type()
-}
-
-void methodModifiers() :
-{}
-{
-  methodModifier() methodModifiers1()
-}
-
-void methodModifiers1() :
-{}
-{
-  methodModifier() methodModifiers1() | {}
-}
-
-void methodModifier() :
-{}
-{
-  < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < ABSTRACT > | < FINAL > | < SYNCHRONIZED > | < NATIVE >
-}
-
-void methodDeclarator() :
-{}
-{
-  < ID > < PARTA > (formalParameterList())? < PARTC >
-}
-
-void methodBody() :
-{}
-{
-  block() | < SEMIC >
-}
-
-void interfaceDeclaration() :
-{}
-{
-  (interfaceModifiers())? < INTERFACE > < ID > (extendsInterfaces())? interfaceBody()
-}
-
-void interfaceModifiers() :
-{}
-{
-  interfaceModifier() interfaceModifiers1()
-}
-
-void interfaceModifiers1() :
-{}
-{
-  interfaceModifier() interfaceModifiers() | {}
-}
-
-void interfaceModifier() :
-{}
-{
-  < PUBLIC > | < ABSTRACT >
-}
-
-void extendsInterfaces() :
-{}
-{
-  < EXTENDS > classOrInterfaceType() extendsInterfaces1()
-}
-
-void extendsInterfaces1() :
-{}
-{
-  < COMMA > classOrInterfaceType() extendsInterfaces1() | {}
-}
-
-void interfaceBody() :
-{}
-{
-  < PARGA > (interfaceMemberDeclarations())? < PARGC >
-}
-
-void interfaceMemberDeclarations() :
-{}
-{
-  interfaceMemberDeclaration() interfaceMemberDeclarations1()
-}
-
-void interfaceMemberDeclarations1() :
-{}
-{
-  interfaceMemberDeclaration() interfaceMemberDeclarations1() | {}
-}
-
-void interfaceMemberDeclaration() :
-{}
-{
-   LOOKAHEAD(3) constantDeclaration() | abstractMethodDeclaration()
-}
-
-void constantDeclaration() :
-{}
-{
-  constantModifiers() type() variableDeclarator()
-}
-
-void constantModifiers() :
-{}
-{
-  < PUBLIC > | < STATIC > | < FINAL >
-}
-
-void abstractMethodDeclaration() :
-{}
-{
-  (abstractMethodModifiers())? resultType() methodDeclarator() (throwsConstruct())? < SEMIC >
-}
-
-void abstractMethodModifiers() :
-{}
-{
-  abstractMethodModifier() abstractMethodModifiers1()
-}
-
-void abstractMethodModifiers1() :
-{}
-{
-  abstractMethodModifier() abstractMethodModifiers1() | {}
-}
-
-void abstractMethodModifier() :
-{}
-{
-  < PUBLIC > | < ABSTRACT >
 }
 
 void arrayInitializer() :
@@ -688,106 +475,456 @@ void variableInitializers1() :
   < COMMA > variableInitializer() variableInitializers1() | {}
 }
 
-void type() :
+void constructorDeclaration() :
 {}
 {
-	(primitiveType() | classOrInterfaceType()) type1()
+  (constructorModifier())? constructorDeclarator() (throwsConstruct())? constructorBody()
 }
 
-void type1():
+void constructorModifier() #void:
+{}
+{
+  < PUBLIC > | < PROTECTED > | < PRIVATE >
+}
+
+void constructorDeclarator() #void:
+{}
+{
+  < ID > < PARTA > (formalParameterList())? < PARTC >
+}
+
+void formalParameterList() :
+{}
+{
+  formalParameter() formalParameterList1()
+}
+
+void formalParameterList1() #void:
+{}
+{
+  < COMMA > formalParameter() formalParameterList1() | {}
+}
+
+void formalParameter() :
+{}
+{
+  type() variableDeclaratorId()
+}
+
+void variableDeclaratorId() #void:
+{}
+{
+  < ID > variableDeclaratorId1()
+  | objectDeclaratorId()
+}
+
+void objectDeclaratorId() #void:
+{}
+{
+     < MINOR > <ID> objectDeclaratorId1() 
+}
+
+
+void objectDeclaratorId1() #void:
+{}
+{
+    < MAJOR > variableDeclaratorId1() < ID >
+    | <COMMA > <ID> < MAJOR > variableDeclaratorId1() < ID >
+}
+
+
+void variableDeclaratorId1() #void:
+{}
+{
+  < PARQA > < PARQC > variableDeclaratorId() | {}
+}
+
+void type() #void:
+{}
+{
+	(primitiveType() | objectType()) type1()
+}
+
+void type1() #void:
 {}
 {
 	< PARQA > < PARQC > type1() | {}
 }
 
-void primitiveType() :
+void primitiveType() #void:
 {}
 {
- < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | < BOOLEAN > | floatingPointType()
+ < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | < BOOLEAN > | < FLOAT > | < DOUBLE >
 }
 
-void numericType():
+void throwsConstruct() :
 {}
 {
-  < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | floatingPointType()
+  < THROWS > classTypeList()
 }
 
-
-void floatingPointType():
+void classTypeList() #void:
 {}
 {
-  < FLOAT > | < DOUBLE >
+  classOrInterfaceType() classTypeList1()
 }
 
-void referenceType():
+void classTypeList1() #void:
 {}
 {
-   LOOKAHEAD(3) classOrInterfaceType() | type() < PARQA > < PARQC >
+  < COMMA > classOrInterfaceType() classTypeList1() | {}
 }
 
-void classOrInterfaceType():
+void constructorBody() :
 {}
 {
-   /*LOOKAHEAD(3) classType() | interfaceType()*/
-   LOOKAHEAD(4) <ID> <MINOR> <ID> <COMMA> <ID> <MAJOR>
-   | LOOKAHEAD(2) <ID> <MINOR> <ID> <MAJOR>
-   | < ID >
- 
+  	< PARGA > (constructorBody1())* < PARGC >
 }
 
-/*
-void classType():
+void constructorBody1() #void :
 {}
 {
-  typeName()
+  	LOOKAHEAD(2) blockStatements()
+	| LOOKAHEAD(2) (< THIS > < PARTA > (argumentList())? < PARTC > <SEMIC>) #thisMethod
+	| (< SUPER > < PARTA > (argumentList())? < PARTC > <SEMIC>) #superMethod
 }
 
-void interfaceType():
-{}
-{
-  typeName()
-}*/
-
-void block():
-{}
-{
-  < PARGA > (blockStatements())? < PARGC >
-}
-
-
-void blockStatements():
+void blockStatements() #void:
 {}
 {
   blockStatement() blockStatements1()
 }
 
-void blockStatements1():
+void blockStatements1() #void:
 {}
 {
 	blockStatement() blockStatements1() | { }
 }
 
-void blockStatement():
+void blockStatement() #void:
 {}
 {
 	 LOOKAHEAD(3) localVariableDeclarationStatement()
 	 | statement()
 }
 
-void localVariableDeclarationStatement():
+void localVariableDeclarationStatement() :
 {}
 {
 	localVariableDeclaration() <SEMIC>
 }
 
-void localVariableDeclaration():
+void localVariableDeclaration() #void:
 {}
 {
 	type() variableDeclarators()
 }
 
+void argumentList() :
+{}
+{
+	expression() argumentList1()
+}
 
-void statement():
+void argumentList1() #void :
+{}
+{
+  <COMMA> expression() argumentList1() | {}
+}
+
+void expression() :
+{}
+{
+	assignmentExpression()
+}
+
+void assignmentExpression() #void :
+{}
+{
+	LOOKAHEAD(3) conditionalExpression() | assignment()
+}
+
+void assignment() :
+{}
+{
+  leftHandSide() assignmentOperator() assignmentExpression()
+}
+
+void leftHandSide() :
+{}
+{
+	LOOKAHEAD(3) fieldAccess()
+	| LOOKAHEAD(3) identifierName()
+	| arrayAccess()
+}
+
+void fieldAccess() :
+{}
+{
+	< THIS > < DOT > < ID >
+	| < SUPER > < DOT > < ID >
+}
+
+void assignmentOperator() :
+{}
+{
+	< MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
+}
+
+void conditionalExpression() #void :
+{}
+{
+	conditionalOrExpression() 
+}
+
+void conditionalOrExpression() #void:
+{}
+{
+	conditionalAndExpression() conditionalOrExpression1()
+}
+
+void conditionalOrExpression1() #void:
+{}
+{
+  <OR> conditionalAndExpression() conditionalOrExpression1() | { }
+}
+
+void conditionalAndExpression() #void :
+{}
+{
+	inclusiveOrExpression() conditionalAndExpression1()
+}
+
+void conditionalAndExpression1() #void:
+{}
+{
+	<AND> inclusiveOrExpression() conditionalAndExpression1() | { }
+}
+
+void inclusiveOrExpression() #void:
+{}
+{
+	exclusiveOrExpression() inclusiveOrExpression1()
+}
+
+void inclusiveOrExpression1() #void:
+{}
+{
+	<OR> exclusiveOrExpression() inclusiveOrExpression1() | { }
+}
+
+
+void exclusiveOrExpression() #void:
+{}
+{
+	andExpression() exclusiveOrExpression1()
+}
+
+void exclusiveOrExpression1() #void:
+{}
+{
+	<EXP> andExpression() exclusiveOrExpression1() | { }
+}
+
+void andExpression() #void:
+{}
+{
+	equalityExpression() andExpression1()
+}
+
+void andExpression1() #void:
+{}
+{
+  <AND> equalityExpression() andExpression1() | { }
+}
+
+void equalityExpression() #void:
+{}
+{
+	relationalExpression() equalityExpression1()
+}
+
+void equalityExpression1() #void:
+{}
+{
+  (<MAJOR> | <MINOR> | <RELOP>) relationalExpression() equalityExpression1() | { }
+}
+
+void relationalExpression() #void:
+{}
+{
+	additiveExpression() relationalExpression1()
+}
+
+void relationalExpression1() #void:
+{}
+{
+	<MAJOR> additiveExpression() relationalExpression1()
+	| <MINOR> additiveExpression() relationalExpression1()
+	| <RELOP> additiveExpression() relationalExpression1()
+	//| <INSTANCEOF> referenceType() relationalExpression1()
+	| {}
+}
+
+void additiveExpression() #void:
+{}
+{
+	multiplicativeExpression() additiveExpression1()
+}
+
+void additiveExpression1() #void:
+{}
+{
+  <ARITOP_LP> multiplicativeExpression() additiveExpression1() | { }
+}
+
+void multiplicativeExpression() #void:
+{}
+{
+	unaryExpression()  multiplicativeExpression1()
+}
+
+void multiplicativeExpression1() #void:
+{}
+{
+  <ARITOP_HP> unaryExpression() multiplicativeExpression1() | { }
+}
+
+void castExpression() #void:
+{}
+{
+  <PARTA> type() <PARTC> unaryExpression()
+}
+
+void unaryExpression() #void:
+{}
+{
+ 	LOOKAHEAD(3) identifierName() unaryExpression1()
+ 	| LOOKAHEAD(3) primary()
+ 	| castExpression()
+	| < ARITOP_LP > unaryExpression()
+	| < NOT > unaryExpression()
+}
+
+void unaryExpression1() #void:
+{}
+{
+  <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
+  | <ARITOP_LP> <ARITOP_LP>
+  | { }
+}
+
+void preIncrDecrExpression() :
+{}
+{
+	<ARITOP_LP> <ARITOP_LP> unaryExpression()
+}
+
+void postIncrDecrExpression() :
+{}
+{
+	identifierName() <ARITOP_LP> <ARITOP_LP>
+}
+
+void identifierName() #void :
+{}
+{
+	< ID > identifierName1()
+}
+
+void identifierName1() #void :
+{}
+{
+	< DOT > (< ID > | <CLASS>) identifierName1()
+	| {}
+}
+
+
+void primary() #void:
+{}
+{
+	arrayAccess()
+	| <THIS>
+	| <PARTA> expression() <PARTC>
+	| classInstanceCreationExpression() 
+	| literal()
+	
+}
+
+void classInstanceCreationExpression() :
+{}
+{
+	<NEW> classOrInterfaceType() classInstanceCreationExpression1()	
+}
+
+void classInstanceCreationExpression1() #void:
+{}
+{
+	 classOrInterfaceType() classInstanceCreationExpression2()
+	| primitiveType() dimExprs() (dims())?
+	
+}
+
+void classInstanceCreationExpression2() #void:
+{}
+{
+	<PARTA> (argumentList())? <PARTC> 
+	| <MINOR> (argumentList())? <MAJOR> <PARTA> (argumentList())? <PARTC>
+	| dimExprs() (dims())?
+}
+
+void dimExprs() #void:
+{}
+{
+	dimExpr() dimExprs1()
+}
+
+
+void dimExprs1() #void:
+{}
+{
+	dimExpr() dimExprs1() | {}
+}
+
+void dimExpr() #void:
+{}
+{
+	<PARQA> expression() <PARQC>
+}
+
+void dims() #void:
+{}
+{
+	dims1() <PARQA> <PARQC>
+}
+
+
+void dims1() #void:
+{}
+{
+
+   <PARQA> <PARQC> dims1() | {}
+
+}
+
+void arrayAccess() :
+{}
+{
+	identifierName() <PARQA> expression() <PARQC> 
+}
+
+
+void literal() #void:
+{}
+{
+	(< TRUE > | < FALSE >)
+	| <CHARVALUE>
+	| <LITERAL>
+	| < NUM >
+	| < NULL >
+}
+
+void statement() #void:
 {}
 {
 	 LOOKAHEAD(2) statementWithoutTrailingSubstatement()
@@ -807,11 +944,17 @@ void statementNoShortIf():
 	| forStatementNoShortIf()
 }
 
-void statementWithoutTrailingSubstatement():
+void block() #void:
+{}
+{
+  < PARGA > (blockStatements())? < PARGC >
+}
+
+void statementWithoutTrailingSubstatement() #void:
 {}
 {
 	block()
-	| emptyStatement()
+	|emptyStatement()
 	| expressionStatement()
 	| switchStatement()
 	| doStatement()
@@ -847,20 +990,39 @@ void expressionStatement():
 	statementExpression() < SEMIC >
 }
 
+
 void statementExpression():
 {}
 {
-	LOOKAHEAD(6) assignment()
-	| LOOKAHEAD(4) methodInvocation()
+	LOOKAHEAD(6) assignment()|
+	LOOKAHEAD(2) methodInvocation()
 	| postIncrDecrExpression()
 	| preIncrDecrExpression()
 	| classInstanceCreationExpression()
+	
 }
 
-void ifThenStatement():
+/*TODO*/
+void methodInvocation() :
 {}
 {
-  < IF > < PARTA > expression() < PARTC > statement() elseStatement()
+	 LOOKAHEAD(2) identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	// | LOOKAHEAD(2) primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
+}
+
+void methodInvocation1():
+{}
+{
+  <DOT> methodInvocation()
+  | {}
+}
+
+void ifThenStatement() :
+{}
+{
+  < IF > < PARTA > expression() < PARTC > (statement()) #ifBody elseStatement()
 }
 
 void elseStatement():
@@ -950,8 +1112,14 @@ void doStatement():
 void forStatement():
 {}
 {
-  LOOKAHEAD(5) < FOR > < PARTA > forInit() < SEMIC > expression()  < SEMIC > forUpdate() < PARTC > statement()
-  | < FOR > < PARTA > type() < ID > < DPOINTS > expression() < PARTC > statement()
+  < FOR > < PARTA > forStatement1() < PARTC > statement()
+}
+
+void forStatement1():
+{}
+{
+  LOOKAHEAD(3) forInit() < SEMIC > expression() <SEMIC> forUpdate() 
+  | type() <ID> <DPOINTS> expression() 
 }
 
 void forStatementNoShortIf():
@@ -999,7 +1167,7 @@ void continueStatement():
 void returnStatement():
 {}
 {
-  < RETURN > expression() < SEMIC >
+  < RETURN > (expression())? < SEMIC > 
 }
 
 void throwsStatement():
@@ -1049,353 +1217,4 @@ void constantExpression() :
 {}
 {
 	expression()
-}
-
-void expression() :
-{}
-{
-	assignmentExpression()
-}
-
-void assignmentExpression() :
-{}
-{
-	LOOKAHEAD(3) conditionalExpression() | assignment()
-}
-
-void assignment() :
-{}
-{
-  leftHandSide() assignmentOperator() assignmentExpression()
-}
-
-void leftHandSide() :
-{}
-{
-	LOOKAHEAD(3) fieldAccess()
-	| LOOKAHEAD(3) expressionName()
-	| arrayAccess()
-}
-
-void assignmentOperator() :
-{}
-{
-	< MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
-}
-
-void conditionalExpression() :
-{}
-{
-	 LOOKAHEAD(3) conditionalOrExpression() | conditionalOrExpression() <QMARK> expression() <DPOINTS> conditionalExpression()
-}
-
-void conditionalOrExpression() :
-{}
-{
-	conditionalAndExpression() conditionalOrExpression1()
-}
-
-void conditionalOrExpression1():
-{}
-{
-  <OR> conditionalAndExpression() conditionalOrExpression1() | { }
-}
-
-void conditionalAndExpression() :
-{}
-{
-	inclusiveOrExpression() conditionalAndExpression1()
-}
-
-void conditionalAndExpression1():
-{}
-{
-	<AND> inclusiveOrExpression() conditionalAndExpression1() | { }
-}
-
-void inclusiveOrExpression() :
-{}
-{
-	exclusiveOrExpression() inclusiveOrExpression1()
-}
-
-void inclusiveOrExpression1():
-{}
-{
-	<OR> exclusiveOrExpression() inclusiveOrExpression1() | { }
-}
-
-
-void exclusiveOrExpression() :
-{}
-{
-	andExpression() exclusiveOrExpression1()
-}
-
-void exclusiveOrExpression1() :
-{}
-{
-	<EXP> andExpression() exclusiveOrExpression1() | { }
-}
-
-void andExpression() :
-{}
-{
-	equalityExpression() andExpression1()
-}
-
-void andExpression1():
-{}
-{
-  <AND> equalityExpression() andExpression1() | { }
-}
-
-void equalityExpression() :
-{}
-{
-	relationalExpression() equalityExpression1()
-}
-
-void equalityExpression1():
-{}
-{
-  (<MAJOR> | <MINOR> | <RELOP>) relationalExpression() equalityExpression1() | { }
-}
-
-void relationalExpression() :
-{}
-{
-	additiveExpression() relationalExpression1()
-}
-
-void relationalExpression1() :
-{}
-{
-	<MAJOR> additiveExpression() relationalExpression1()
-	| <MINOR> additiveExpression() relationalExpression1()
-	| <RELOP> additiveExpression() relationalExpression1()
-	| <INSTANCEOF> referenceType() relationalExpression1()
-	| {}
-}
-
-void additiveExpression() :
-{}
-{
-	multiplicativeExpression() additiveExpression1()
-}
-
-void additiveExpression1():
-{}
-{
-  <ARITOP_LP> multiplicativeExpression() additiveExpression1() | { }
-}
-
-void multiplicativeExpression() :
-{}
-{
-	unaryExpression()  multiplicativeExpression1()
-}
-
-void multiplicativeExpression1():
-{}
-{
-  <ARITOP_HP> unaryExpression() multiplicativeExpression1() | { }
-}
-
-void castExpression() :
-{}
-{
-	LOOKAHEAD(2) <PARTA> type() <PARTC> unaryExpression()
-	| <PARTA> <PARTA> type() <PARTC> unaryExpression()
-	 /*| <PARTA> referenceType() <PARTC> unaryExpression()*/
-}
-
-void unaryExpression() :
-{}
-{
-	 LOOKAHEAD(8) expressionName() <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
-	 | LOOKAHEAD(5) <ID> <DOT> <CLASS>
-	 | LOOKAHEAD(3) castExpression()
-	 | LOOKAHEAD(3) primary()
-	 | LOOKAHEAD(4) expressionName() <PARTC> < DOT > <ID > <PARTA > (argumentList())? <PARTC> (< DOT > unaryExpression())?
-	 | LOOKAHEAD(3) expressionName()
-	 | LOOKAHEAD(3) preIncrDecrExpression()
-	 | LOOKAHEAD(3) < ARITOP_LP > unaryExpression()
-	 | < NOT > unaryExpression()
-}
-
-
-void preIncrDecrExpression() :
-{}
-{
-	<ARITOP_LP> <ARITOP_LP> unaryExpression()
-}
-
-void postIncrDecrExpression() :
-{}
-{
-	expressionName() <ARITOP_LP> <ARITOP_LP>
-}
-
-void methodInvocation() :
-{}
-{
-	 LOOKAHEAD(3) methodName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | LOOKAHEAD(3) primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | <THIS> <DOT> ambiguousName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
-}
-
-void methodInvocation1():
-{}
-{
-  <DOT> methodInvocation()
-  | {}
-}
-
-
-void fieldAccess() :
-{}
-{
-	< THIS > < DOT > < ID > | < SUPER > < DOT > < ID >
-}
-
-void primary() :
-{}
-{
-	LOOKAHEAD(3) primaryNoNewArray() | arrayCreationExpression()
-}
-
-void primaryNoNewArray() :
-{}
-{
-	LOOKAHEAD(2) arrayAccess()
-	| < THIS >
-	| <PARTA> expression() <PARTC>
-	| classInstanceCreationExpression() /* | fieldAccess() | methodInvocation() */
-	| literal()
-}
-
-void classInstanceCreationExpression() :
-{}
-{
-	LOOKAHEAD(3) <NEW> classOrInterfaceType() <PARTA> (argumentList())? <PARTC>
-	| <NEW> classOrInterfaceType() <MINOR> (argumentList())? <MAJOR> <PARTA> (argumentList())? <PARTC>
-}
-
-void argumentList() :
-{}
-{
-	expression() argumentList1()
-}
-
-
-void argumentList1() :
-{}
-{
-  <COMMA> expression() argumentList1()  | {}
-}
-
-
-void arrayCreationExpression() :
-{}
-{
-	LOOKAHEAD(2) <NEW> primitiveType() dimExprs() (dims())? | <NEW> classOrInterfaceType() dimExprs() (dims())?
-}
-
-void dimExprs() :
-{}
-{
-	dimExpr() dimExprs1()
-}
-
-
-void dimExprs1() :
-{}
-{
-	dimExpr()dimExprs1() | {}
-}
-
-
-void dimExpr() :
-{}
-{
-	<PARQA> expression() <PARQC>
-}
-
-void dims() :
-{}
-{
-	dims1() <PARQA> <PARQC>
-}
-
-
-void dims1() :
-{}
-{
-
-   <PARQA> <PARQC> dims1() | {}
-
-}
-
-
-void arrayAccess() :
-{}
-{
-	expressionName() <PARQA> expression() <PARQC> // | primaryNoNewArray() <PARQA> expression() <PARQC>
-}
-
-void typeName():
-{}
-{
-   <ID> typeName1()
-}
-
-void typeName1():
-{}
-{
-  <COMMA> <ID> typeName1() | {}
-}
-
-
-void simpleTypeName():
-{}
-{
-   <ID>
-}
-
-void expressionName():
-{}
-{
-	ambiguousName()
-}
-
-void methodName():
-{}
-{
-	ambiguousName()
-} 
-
-void ambiguousName():
-{}
-{
-	< ID > ambiguousName1()
-}
-
-
-void ambiguousName1():
-{}
-{
-	< DOT > < ID > ambiguousName1() | {}
-}
-
-
-void literal():
-{}
-{
-	(< TRUE > | < FALSE >)
-	| <CHARVALUE>
-	| <LITERAL>
-	| < NUM >
-	| < NULL >
 }
