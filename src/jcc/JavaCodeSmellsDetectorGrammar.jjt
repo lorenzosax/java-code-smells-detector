@@ -44,19 +44,19 @@ SKIP :
 | <WINDOWS_EOL : "\r\n">
 | <UNIX_EOL: "\n">
 | <OLD_MAC_EOL: "\r">
-| < "//" > : IN_COMMENTO_SINGLE_LINE
-| < "/*" > : IN_COMMENTO_MULTI_LINE
+| < "//" > : COMMENT_IN_SINGLE_LINE
+| < "/*" > : COMMENT_IN_MULTI_LINE
 | < "@" < ID >> : ANNOTATION
 }
 
-< IN_COMMENTO_SINGLE_LINE >
+< COMMENT_IN_SINGLE_LINE >
 SKIP :
 {
   < "\n" | "\r\n" > : DEFAULT
 | < ~[ ] >
 }
 
-< IN_COMMENTO_MULTI_LINE >
+< COMMENT_IN_MULTI_LINE >
 SKIP :
 {
   < "*/" > : DEFAULT
@@ -71,7 +71,6 @@ SKIP :
 }
 
 /* RESERVED WORDS*/
-
 TOKEN :
 {
   < ABSTRACT: "abstract" >
@@ -139,7 +138,8 @@ TOKEN :
 | < TRANSITIVE: "transitive" >
 }
 
-TOKEN : /* NUMBERS */
+/* NUMBERS */
+TOKEN : 
 {
   < #DIGIT : [ "0"-"9" ] >
 | < #DIGITS : (< DIGIT >)+ >
@@ -156,8 +156,7 @@ TOKEN : /* NUMBERS */
     < DIGITS > < OPT_FRANCTION > < OPT_EXPONENT > >
 }
 
-
-TOKEN : /* IDS*/
+TOKEN :
 {
   < ID :
     [ "A"-"Z", "a"-"z", "_" ]
@@ -167,7 +166,8 @@ TOKEN : /* IDS*/
     )* >
 }
 
-TOKEN: /* OPERATORS*/
+/* OPERATORS*/
+TOKEN: 
 {
  
  < ARITOP_LP :
@@ -292,7 +292,7 @@ void typeDeclaration() #void :
 void classDeclaration() :
 {}
 {
-  (classOrInterfaceModifiers())? < CLASS > < ID > (extendsList())? (interfaces())? classBody()
+  (classOrInterfaceModifiers())? < CLASS > < ID > (extendsList())? (implementsList())? classBody()
 }
 
 void classOrInterfaceModifiers() #void:
@@ -319,7 +319,7 @@ void superConstruct():
   < EXTENDS > classOrInterfaceType()
 }
 
-void interfaces():
+void implementsList():
 {}
 {
   < IMPLEMENTS > classOrInterfaceType()
@@ -328,7 +328,62 @@ void interfaces():
 void interfaceDeclaration() :
 {}
 {
-  (classOrInterfaceModifiers())? < INTERFACE > < ID > (extendsList())? //interfaceBody()
+  (classOrInterfaceModifiers())? < INTERFACE > < ID > (extendsList())? interfaceBody()
+}
+
+void interfaceBody() :
+{}
+{
+  < PARGA > (interfaceMemberDeclarations())? < PARGC >
+}
+
+void interfaceMemberDeclarations() #void :
+{}
+{
+  interfaceMemberDeclaration() interfaceMemberDeclarations1()
+}
+
+void interfaceMemberDeclarations1() #void :
+{}
+{
+  interfaceMemberDeclaration() interfaceMemberDeclarations1() | {}
+}
+
+void interfaceMemberDeclaration() #void:
+{}
+{
+  interfaceMemberModifiers() type() interfaceMemberDeclaration1()
+}
+
+void interfaceMemberDeclaration1() #void:
+{}
+{
+  LOOKAHEAD(2) (variableDeclarator() < SEMIC >) #constantDeclaration
+  | (methodDeclarator() (throwsConstruct())? < SEMIC >) #abstractMethodDeclaration
+}
+
+void interfaceMemberModifiers() #void :
+{}
+{
+  interfaceMemberModifier() interfaceMemberModifiers1()
+}
+
+void interfaceMemberModifiers1() #void :
+{}
+{
+  interfaceMemberModifier() interfaceMemberModifiers1() | {}
+}
+
+void interfaceMemberModifier() #void :
+{}
+{
+  < PUBLIC > | < STATIC > | < FINAL > | < ABSTRACT >
+}
+
+void methodDeclarator() #void :
+{}
+{
+  < ID > < PARTA > (formalParameterList())? < PARTC >
 }
 
 void extendsList() :
@@ -542,7 +597,7 @@ void variableDeclaratorId1() #void:
 void type() #void:
 {}
 {
-	(primitiveType() | objectType()) type1()
+	(< VOID > | primitiveType() | objectType()) type1()
 }
 
 void type1() #void:
@@ -554,7 +609,7 @@ void type1() #void:
 void primitiveType() #void:
 {}
 {
- < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | < BOOLEAN > | < FLOAT > | < DOUBLE >
+  < BYTE > | < SHORT > | < INT > | < LONG > | < CHAR > | < BOOLEAN > | < FLOAT > | < DOUBLE >
 }
 
 void throwsConstruct() :
