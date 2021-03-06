@@ -280,7 +280,7 @@ void typeDeclarations() #void :
 void typeDeclarations1() #void :
 {}
 {
-  typeDeclaration() typeDeclarations1() | { }
+  typeDeclaration() typeDeclarations1() | {}
 }
 
 void typeDeclaration() #void :
@@ -386,6 +386,12 @@ void methodDeclarator() #void :
   < ID > < PARTA > (formalParameterList())? < PARTC >
 }
 
+void methodBody() :
+{}
+{
+  block() | < SEMIC >
+}
+
 void extendsList() :
 {}
 {
@@ -414,7 +420,7 @@ void classOrInterfaceType1() #void:
 {}
 {
    <MINOR> <ID> classOrInterfaceType2()
-   | { }
+   | {}
 }
 
 void classOrInterfaceType2() #void:
@@ -445,37 +451,42 @@ void classBodyDeclarations1() #void :
 void classBodyDeclaration() #void:
 {}
 {
- /* LOOKAHEAD(4)*/ constructorDeclaration()
- // | classMemberDeclaration()
+  (classMemberModifiers())? classBodyDeclaration1()
 }
 
-
-void classMemberDeclaration() :
+void classBodyDeclaration1() #void:
 {}
 {
-  /*LOOKAHEAD(9)*/ fieldDeclaration()
-  //| methodDeclaration()
+  LOOKAHEAD(2) classMemberDeclaration()
+  | constructorDeclaration()
 }
 
-void fieldDeclaration() :
+void classMemberDeclaration() #void :
 {}
 {
-  (fieldModifiers())? type() variableDeclarators() < SEMIC >
+  type() classMemberDeclaration1()
 }
 
-void fieldModifiers() :
+void classMemberDeclaration1() #void:
 {}
 {
-  fieldModifier() fieldModifiers1()
+  LOOKAHEAD(2) (variableDeclarators() < SEMIC >) #fieldDeclaration
+  | (methodDeclarator() methodBody()) #methodDeclaration
 }
 
-void fieldModifiers1() :
+void classMemberModifiers() #void :
 {}
 {
-  fieldModifier() fieldModifiers1() | {}
+  classMemberModifier() classMemberModifiers1()
 }
 
-void fieldModifier() :
+void classMemberModifiers1() #void :
+{}
+{
+  classMemberModifier() classMemberModifiers1() | {}
+}
+
+void classMemberModifier() #void :
 {}
 {
   < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < FINAL > | < TRANSIENT > | < VOLATILE >
@@ -503,7 +514,7 @@ void variableDeclarator1() #void :
 {}
 {
   < ASS > variableInitializer()
-  | { }
+  | {}
 }
 
 void variableInitializer() :
@@ -533,7 +544,7 @@ void variableInitializers1() :
 void constructorDeclaration() :
 {}
 {
-  (constructorModifier())? constructorDeclarator() (throwsConstruct())? constructorBody()
+  constructorDeclarator() (throwsConstruct())? constructorBody()
 }
 
 void constructorModifier() #void:
@@ -579,14 +590,12 @@ void objectDeclaratorId() #void:
      < MINOR > <ID> objectDeclaratorId1() 
 }
 
-
 void objectDeclaratorId1() #void:
 {}
 {
     < MAJOR > variableDeclaratorId1() < ID >
     | <COMMA > <ID> < MAJOR > variableDeclaratorId1() < ID >
 }
-
 
 void variableDeclaratorId1() #void:
 {}
@@ -653,7 +662,7 @@ void blockStatements() #void:
 void blockStatements1() #void:
 {}
 {
-	blockStatement() blockStatements1() | { }
+	blockStatement() blockStatements1() | {}
 }
 
 void blockStatement() #void:
@@ -741,7 +750,7 @@ void conditionalOrExpression() #void:
 void conditionalOrExpression1() #void:
 {}
 {
-  <OR> conditionalAndExpression() conditionalOrExpression1() | { }
+  <OR> conditionalAndExpression() conditionalOrExpression1() | {}
 }
 
 void conditionalAndExpression() #void :
@@ -753,7 +762,7 @@ void conditionalAndExpression() #void :
 void conditionalAndExpression1() #void:
 {}
 {
-	<AND> inclusiveOrExpression() conditionalAndExpression1() | { }
+	<AND> inclusiveOrExpression() conditionalAndExpression1() | {}
 }
 
 void inclusiveOrExpression() #void:
@@ -765,7 +774,7 @@ void inclusiveOrExpression() #void:
 void inclusiveOrExpression1() #void:
 {}
 {
-	<OR> exclusiveOrExpression() inclusiveOrExpression1() | { }
+	<OR> exclusiveOrExpression() inclusiveOrExpression1() | {}
 }
 
 
@@ -778,7 +787,7 @@ void exclusiveOrExpression() #void:
 void exclusiveOrExpression1() #void:
 {}
 {
-	<EXP> andExpression() exclusiveOrExpression1() | { }
+	<EXP> andExpression() exclusiveOrExpression1() | {}
 }
 
 void andExpression() #void:
@@ -790,7 +799,7 @@ void andExpression() #void:
 void andExpression1() #void:
 {}
 {
-  <AND> equalityExpression() andExpression1() | { }
+  <AND> equalityExpression() andExpression1() | {}
 }
 
 void equalityExpression() #void:
@@ -802,7 +811,7 @@ void equalityExpression() #void:
 void equalityExpression1() #void:
 {}
 {
-  (<MAJOR> | <MINOR> | <RELOP>) relationalExpression() equalityExpression1() | { }
+  (<MAJOR> | <MINOR> | <RELOP>) relationalExpression() equalityExpression1() | {}
 }
 
 void relationalExpression() #void:
@@ -830,7 +839,7 @@ void additiveExpression() #void:
 void additiveExpression1() #void:
 {}
 {
-  <ARITOP_LP> multiplicativeExpression() additiveExpression1() | { }
+  <ARITOP_LP> multiplicativeExpression() additiveExpression1() | {}
 }
 
 void multiplicativeExpression() #void:
@@ -842,7 +851,7 @@ void multiplicativeExpression() #void:
 void multiplicativeExpression1() #void:
 {}
 {
-  <ARITOP_HP> unaryExpression() multiplicativeExpression1() | { }
+  <ARITOP_HP> unaryExpression() multiplicativeExpression1() | {}
 }
 
 void castExpression() #void:
@@ -866,7 +875,7 @@ void unaryExpression1() #void:
 {
   <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
   | <ARITOP_LP> <ARITOP_LP>
-  | { }
+  | {}
 }
 
 void preIncrDecrExpression() :
@@ -1101,7 +1110,6 @@ void switchStatement():
 void switchBlock():
 {}
 {
-	/*< PARGA > (switchBlockStatementGroups())? (switchLabels())? < PARGC >*/
 	LOOKAHEAD(2) < PARGA > < PARGC >
 	| LOOKAHEAD(2) < PARGA > switchBlockStatementGroups() < PARGC >
 	| LOOKAHEAD(2) < PARGA > switchLabels() < PARGC >
@@ -1117,7 +1125,7 @@ void switchBlockStatementGroups():
 void switchBlockStatementGroups1():
 {}
 {
-	switchBlockStatementGroup() switchBlockStatementGroups1() | { }
+	switchBlockStatementGroup() switchBlockStatementGroups1() | {}
 }
 
 void switchBlockStatementGroup():
@@ -1135,7 +1143,7 @@ void switchLabels():
 void switchLabels1():
 {}
 {
-	switchLabel() switchLabels1() | { }
+	switchLabel() switchLabels1() | {}
 }
 
 void switchLabel():
@@ -1205,7 +1213,7 @@ void statementExpressionList():
 void statementExpressionList1():
 {}
 {
-	< COMMA > statementExpression() statementExpressionList1() | { }
+	< COMMA > statementExpression() statementExpressionList1() | {}
 }
 
 void breakStatement():
@@ -1253,7 +1261,7 @@ void catches():
 void catches1():
 {}
 {
-	catchClause() catches1() | { }
+	catchClause() catches1() | {}
 }
 
 void catchClause():
