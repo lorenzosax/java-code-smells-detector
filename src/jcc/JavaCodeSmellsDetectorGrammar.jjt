@@ -148,12 +148,7 @@ TOKEN :
     (
       "E" ([ "+", "-" ])? < DIGITS >
     )? >
-| < NUM :
-    (
-      "+"
-    | "-"
-    )?
-    < DIGITS > < OPT_FRANCTION > < OPT_EXPONENT > >
+| < NUM : < DIGITS > < OPT_FRANCTION > < OPT_EXPONENT > >
 }
 
 TOKEN :
@@ -853,7 +848,7 @@ void referenceType1() #void :
 void additiveExpression() #void:
 {}
 {
-	multiplicativeExpression() additiveExpression1()
+  multiplicativeExpression() additiveExpression1()
 }
 
 void additiveExpression1() #void:
@@ -865,19 +860,20 @@ void additiveExpression1() #void:
 void multiplicativeExpression() #void:
 {}
 {
-	unaryExpression()  multiplicativeExpression1()
+  unaryExpression() multiplicativeExpression1()
 }
 
 void multiplicativeExpression1() #void:
 {}
 {
-  <ARITOP_HP> unaryExpression() multiplicativeExpression1() | {}
+
+ <ARITOP_HP> unaryExpression() multiplicativeExpression1() | {}
 }
 
 void unaryExpression() #void:
 {}
 {
- 	identifierName() unaryExpression1()
+	identifierName() unaryExpression1()
 	| classInstanceCreationExpression()
 	| literal()
 	| < ARITOP_LP > unaryExpression()
@@ -890,7 +886,7 @@ void unaryExpression1() #void:
 {}
 {
   <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
-  | <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
+  | LOOKAHEAD(2) <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
   | <PARQA> expression() <PARQC> 
   | {}
 }
@@ -906,12 +902,6 @@ void preIncrDecrExpression() :
 {}
 {
 	<ARITOP_LP> <ARITOP_LP> unaryExpression()
-}
-
-void postIncrDecrExpression() :
-{}
-{
-	identifierName() <ARITOP_LP> <ARITOP_LP>
 }
 
 void identifierName() #void :
@@ -1067,6 +1057,7 @@ void statementExpression() #void:
 		((assignmentOperator() assignmentExpression()) #assignmentStatement
 		| (<PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
 		| (<ARITOP_LP> <ARITOP_LP>) #postIncrDecrExpression
+		| (<PARQA> expression() <PARQC> assignmentOperator() assignmentExpression())
 		)
 
 	| LOOKAHEAD(4) (fieldAccess() assignmentOperator() assignmentExpression()) #assignmentStatement
