@@ -410,7 +410,7 @@ void objectType() #void:
    < ID > classOrInterfaceType1()
 }
 
-void classOrInterfaceType() :
+void classOrInterfaceType() #void:
 {}
 {
    < ID > classOrInterfaceType1()
@@ -471,7 +471,7 @@ void classMemberDeclaration1() #void:
 {}
 {
   LOOKAHEAD(2) (variableDeclarators() < SEMIC >) #fieldDeclaration
-  | (methodDeclarator() methodBody()) #methodDeclaration
+  | (methodDeclarator() (throwsConstruct())? methodBody()) #methodDeclaration
 }
 
 void classMemberModifiers() #void :
@@ -684,7 +684,7 @@ void localVariableDeclaration() #void:
 	type() variableDeclarators()
 }
 
-void argumentList() :
+void argumentList() #void:
 {}
 {
 	expression() argumentList1()
@@ -705,7 +705,8 @@ void expression() :
 void assignmentExpression() #void :
 {}
 {
-	LOOKAHEAD(10) assignment() | conditionalExpression()  
+	LOOKAHEAD(3) conditionalExpression()
+	| assignment()
 }
 
 void assignment() #void :
@@ -735,7 +736,7 @@ void fieldAccess() :
 	| < SUPER > < DOT > < ID >
 }
 
-void assignmentOperator() :
+void assignmentOperator() #void:
 {}
 {
   < MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
@@ -935,7 +936,7 @@ void classInstanceCreationExpression() :
 void classInstanceCreationExpression1() #void:
 {}
 {
-	 classOrInterfaceType() classInstanceCreationExpression2()
+	classInstanceCreationExpression2()
 	| primitiveType() dimExprs() (dims())?
 	
 }
@@ -1022,7 +1023,7 @@ void statementWithoutTrailingSubstatement() #void:
 {}
 {
 	block()
-	|emptyStatement()
+	| emptyStatement()
 	| expressionStatement()
 	| switchStatement()
 	| doStatement()
@@ -1062,25 +1063,30 @@ void expressionStatement() #void :
 void statementExpression() #void:
 {}
 {
-	LOOKAHEAD(6) (assignment()) #assignmentStatement
-	| LOOKAHEAD(2) methodInvocation()
-	| postIncrDecrExpression()
+	identifierName()
+		((assignmentOperator() assignmentExpression()) #assignmentStatement
+		| (<PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
+		| (<ARITOP_LP> <ARITOP_LP>) #postIncrDecrExpression
+		)
+
+	| LOOKAHEAD(4) (fieldAccess() assignmentOperator() assignmentExpression()) #assignmentStatement
+    | LOOKAHEAD(4) (<THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
+    | (<SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
+
 	| preIncrDecrExpression()
 	| classInstanceCreationExpression()
 	
 }
 
-/*TODO*/
 void methodInvocation() :
 {}
 {
 	 LOOKAHEAD(2) identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	//NO | LOOKAHEAD(2) primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
 	 | <THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
 	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
 }
 
-void methodInvocation1():
+void methodInvocation1() #void:
 {}
 {
   <DOT> methodInvocation()
@@ -1114,10 +1120,15 @@ void switchStatement():
 void switchBlock():
 {}
 {
-	LOOKAHEAD(2) < PARGA > < PARGC >
-	| LOOKAHEAD(2) < PARGA > switchBlockStatementGroups() < PARGC >
-	| LOOKAHEAD(2) < PARGA > switchLabels() < PARGC >
-	| < PARGA > switchBlockStatementGroups() switchLabels() < PARGC >
+	< PARGA > switchBlock1() < PARGC >
+}
+
+void switchBlock1():
+{}
+{
+	LOOKAHEAD(2) switchBlockStatementGroups() (switchLabels())?
+	| switchLabels()
+	| {}
 }
 
 void switchBlockStatementGroups():
@@ -1153,14 +1164,14 @@ void switchLabels1():
 void switchLabel():
 {}
 {
-  < CASE > constantExpression() < DPOINTS >
-|  < _DEFAULT > < DPOINTS >
+  	< CASE > constantExpression() < DPOINTS >
+	|  < _DEFAULT > < DPOINTS >
 }
 
 void whileStatement():
 {}
 {
-  < WHILE > <PARTA > expression() < PARTC > statement()
+  < WHILE > <PARTA > (expression()) #whileCondition < PARTC > (statement()) #whileBody
 }
 
 void whileStatementNoShortIf():
@@ -1252,8 +1263,7 @@ void synchronizedStatement():
 void tryStatement():
 {}
 {
-  	 LOOKAHEAD(3) < TRY > block() catches()
-	| < TRY > block() (catches())? finallys()
+	< TRY > ((block()) #tryBody) (catches())? (finallys())?
 }
 
 void catches():
@@ -1262,16 +1272,16 @@ void catches():
   	catchClause() catches1()
 }
 
-void catches1():
+void catches1() #void:
 {}
 {
 	catchClause() catches1() | {}
 }
 
-void catchClause():
+void catchClause() #void:
 {}
 {
-  	< CATCH > <PARTA> formalParameter() < PARTC > block()
+  	< CATCH > <PARTA> formalParameter() < PARTC > ((block()) #catcheBody)
 }
 
 void finallys():
