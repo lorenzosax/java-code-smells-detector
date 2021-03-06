@@ -1108,13 +1108,13 @@ void switchStatement():
 	< SWITCH > < PARTA > expression() < PARTC > switchBlock()
 }
 
-void switchBlock():
+void switchBlock() #void:
 {}
 {
 	< PARGA > switchBlock1() < PARGC >
 }
 
-void switchBlock1():
+void switchBlock1() #void:
 {}
 {
 	LOOKAHEAD(2) switchBlockStatementGroups() (switchLabels())?
@@ -1122,13 +1122,13 @@ void switchBlock1():
 	| {}
 }
 
-void switchBlockStatementGroups():
+void switchBlockStatementGroups() #void:
 {}
 {
 	switchBlockStatementGroup() switchBlockStatementGroups1()
 }
 
-void switchBlockStatementGroups1():
+void switchBlockStatementGroups1() #void:
 {}
 {
 	switchBlockStatementGroup() switchBlockStatementGroups1() | {}
@@ -1140,13 +1140,13 @@ void switchBlockStatementGroup():
 	switchLabels() blockStatements()
 }
 
-void switchLabels():
+void switchLabels() #void:
 {}
 {
 	switchLabel() switchLabels1()
 }
 
-void switchLabels1():
+void switchLabels1() #void :
 {}
 {
 	switchLabel() switchLabels1() | {}
@@ -1184,7 +1184,7 @@ void forStatement():
   < FOR > < PARTA > forStatement1() < PARTC > statement()
 }
 
-void forStatement1():
+void forStatement1() #void :
 {}
 {
   LOOKAHEAD(3) forInit() < SEMIC > expression() <SEMIC> forUpdate() 
@@ -1210,13 +1210,13 @@ void forUpdate():
   	statementExpressionList()
 }
 
-void statementExpressionList():
+void statementExpressionList() #void :
 {}
 {
   	statementExpression() statementExpressionList1()
 }
 
-void statementExpressionList1():
+void statementExpressionList1() #void :
 {}
 {
 	< COMMA > statementExpression() statementExpressionList1() | {}
