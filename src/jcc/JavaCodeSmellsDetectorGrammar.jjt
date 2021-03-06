@@ -358,7 +358,7 @@ void interfaceMemberDeclaration() #void:
 void interfaceMemberDeclaration1() #void:
 {}
 {
-  LOOKAHEAD(2) (variableDeclarator() < SEMIC >) #constantDeclaration
+  LOOKAHEAD(2) (variableDeclarator() < SEMIC >) #attributeDeclaration
   | (methodDeclarator() (throwsConstruct())? < SEMIC >) #abstractMethodDeclaration
 }
 
@@ -705,21 +705,27 @@ void expression() :
 void assignmentExpression() #void :
 {}
 {
-	LOOKAHEAD(3) conditionalExpression() | assignment()
+	LOOKAHEAD(10) assignment() | conditionalExpression()  
 }
 
-void assignment() :
+void assignment() #void :
 {}
 {
   leftHandSide() assignmentOperator() assignmentExpression()
 }
 
-void leftHandSide() :
+void leftHandSide() #void :
 {}
 {
-	LOOKAHEAD(3) fieldAccess()
-	| LOOKAHEAD(3) identifierName()
-	| arrayAccess()
+	fieldAccess()
+	| identifierName() leftHandSide1()
+}
+
+void leftHandSide1() #void :
+{}
+{
+	<PARQA> expression() <PARQC>
+	| {}
 }
 
 void fieldAccess() :
@@ -732,7 +738,7 @@ void fieldAccess() :
 void assignmentOperator() :
 {}
 {
-	< MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
+  < MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
 }
 
 void conditionalExpression() #void :
@@ -826,8 +832,21 @@ void relationalExpression1() #void:
 	<MAJOR> additiveExpression() relationalExpression1()
 	| <MINOR> additiveExpression() relationalExpression1()
 	| <RELOP> additiveExpression() relationalExpression1()
-	//| <INSTANCEOF> referenceType() relationalExpression1()
+	| <INSTANCEOF> referenceType() relationalExpression1()
 	| {}
+}
+
+void referenceType() #void:
+{}
+{
+   type() referenceType1()
+}
+
+void referenceType1() #void :
+{}
+{
+  < PARQA > < PARQC > referenceType1()
+  | {} 
 }
 
 void additiveExpression() #void:
@@ -854,28 +873,32 @@ void multiplicativeExpression1() #void:
   <ARITOP_HP> unaryExpression() multiplicativeExpression1() | {}
 }
 
-void castExpression() #void:
-{}
-{
-  <PARTA> type() <PARTC> unaryExpression()
-}
-
 void unaryExpression() #void:
 {}
 {
- 	LOOKAHEAD(3) identifierName() unaryExpression1()
- 	| LOOKAHEAD(3) primary()
- 	| castExpression()
+ 	identifierName() unaryExpression1()
+	| classInstanceCreationExpression()
+	| literal()
 	| < ARITOP_LP > unaryExpression()
 	| < NOT > unaryExpression()
+	| <THIS>
+	| < PARTA > unaryExpression1bis()
 }
 
 void unaryExpression1() #void:
 {}
 {
   <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
-  | <ARITOP_LP> <ARITOP_LP>
+  | <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
+  | <PARQA> expression() <PARQC> 
   | {}
+}
+
+void unaryExpression1bis() #void:
+{}
+{
+  LOOKAHEAD(2) type() <PARTC> unaryExpression() //CAST
+  | expression() <PARTC>  
 }
 
 void preIncrDecrExpression() :
@@ -901,18 +924,6 @@ void identifierName1() #void :
 {
 	< DOT > (< ID > | <CLASS>) identifierName1()
 	| {}
-}
-
-
-void primary() #void:
-{}
-{
-	arrayAccess()
-	| <THIS>
-	| <PARTA> expression() <PARTC>
-	| classInstanceCreationExpression() 
-	| literal()
-	
 }
 
 void classInstanceCreationExpression() :
@@ -970,13 +981,6 @@ void dims1() #void:
    <PARQA> <PARQC> dims1() | {}
 
 }
-
-void arrayAccess() :
-{}
-{
-	identifierName() <PARQA> expression() <PARQC> 
-}
-
 
 void literal() #void:
 {}
@@ -1048,18 +1052,18 @@ void labeledStatementNoShortIf():
 	< ID > <DPOINTS > statementNoShortIf()
 }
 
-void expressionStatement():
+void expressionStatement() #void :
 {}
 {
 	statementExpression() < SEMIC >
 }
 
 
-void statementExpression():
+void statementExpression() #void:
 {}
 {
-	LOOKAHEAD(6) assignment()|
-	LOOKAHEAD(2) methodInvocation()
+	LOOKAHEAD(6) (assignment()) #assignmentStatement
+	| LOOKAHEAD(2) methodInvocation()
 	| postIncrDecrExpression()
 	| preIncrDecrExpression()
 	| classInstanceCreationExpression()
@@ -1071,7 +1075,7 @@ void methodInvocation() :
 {}
 {
 	 LOOKAHEAD(2) identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	// | LOOKAHEAD(2) primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	//NO | LOOKAHEAD(2) primary() <PARTA> (argumentList())? <PARTC> methodInvocation1()
 	 | <THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
 	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
 }
@@ -1089,10 +1093,10 @@ void ifThenStatement() :
   < IF > < PARTA > expression() < PARTC > (statement()) #ifBody elseStatement()
 }
 
-void elseStatement():
+void elseStatement() #void:
 {}
 {
-	< ELSE > statement() | {}
+  (< ELSE > statement()) #elseStatement | {}
 }
 
 void ifThenElseStatementNoShortIf():
