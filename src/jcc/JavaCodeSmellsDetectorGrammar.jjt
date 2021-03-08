@@ -4,6 +4,8 @@
 options
 {
   static = true;
+  multi = true;
+  visitor = true;
 }
 
 PARSER_BEGIN(JavaCodeSmellsDetector)
@@ -12,6 +14,7 @@ package jcc;
 
 import java.io.*;
 import java.util.*;
+import main.*;
 
 public class JavaCodeSmellsDetector
 {
@@ -20,10 +23,13 @@ public class JavaCodeSmellsDetector
     try
     {
       FileInputStream file = new FileInputStream("Example.java");
-      
       JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
-      SimpleNode sn = detector.compilationUnit();
-      sn.dump("");
+      ASTcompilationUnit astCompilationUnit = (ASTcompilationUnit) detector.compilationUnit();
+      astCompilationUnit.dump("");
+
+      Report report = new Report("MetricsReport.csv", "CodeSmellsReport.csv");
+      JavaCodeSmellsDetectorVisitor v = new JavaCodeSmellsDetectorVisitorImplementation();
+      astCompilationUnit.jjtAccept(v, report);
 	}
     catch (Exception e)
     {
@@ -70,8 +76,7 @@ SKIP :
 | < ~[ ] >
 }
 
-/* RESERVED WORDS*/
-TOKEN :
+TOKEN : /* RESERVED WORDS*/
 {
   < ABSTRACT: "abstract" >
 | < ASSERT: "assert" >
@@ -138,8 +143,7 @@ TOKEN :
 | < TRANSITIVE: "transitive" >
 }
 
-/* NUMBERS */
-TOKEN : 
+TOKEN : /* NUMBERS */
 {
   < #DIGIT : [ "0"-"9" ] >
 | < #DIGITS : (< DIGIT >)+ >
@@ -151,7 +155,7 @@ TOKEN :
 | < NUM : < DIGITS > < OPT_FRANCTION > < OPT_EXPONENT > >
 }
 
-TOKEN :
+TOKEN : /* IDENTIFIERS */
 {
   < ID :
     [ "A"-"Z", "a"-"z", "_" ]
@@ -161,8 +165,7 @@ TOKEN :
     )* >
 }
 
-/* OPERATORS*/
-TOKEN: 
+TOKEN: /* OPERATORS*/
 {
  
  < ARITOP_LP :
@@ -191,7 +194,7 @@ TOKEN : /* PUNCTUATION SIMBOLS */
 | < COMMA : "," >
 }
 
-TOKEN :
+TOKEN : /* SIMBOLS */
 {
   < QMARK : "?" >
   | < DPOINTS: ":" >
@@ -215,7 +218,7 @@ TOKEN :
     ) >
 }
 
-TOKEN :
+TOKEN : /* CHARACTERS */
 {
 	< LITERAL : "\"" (~["\n","\r"])* "\"" >
 	| < CHARVALUE : "\'" (~[ "\n", "\r" ]) "\'" >
@@ -224,10 +227,16 @@ TOKEN :
 SimpleNode compilationUnit() :
 {}
 {
-	(packageDeclaration())? (importDeclarations())? (typeDeclarations())? <EOF>
+	(packageDeclaration())? (importDeclarations())? (typeDeclarations())? eof()
 	{
 	  return jjtThis;
 	}
+}
+
+void eof() :
+{}
+{
+  < EOF >
 }
 
 void packageDeclaration() :
@@ -266,6 +275,7 @@ void importDeclaration() :
   <IMPORT> packageName() < SEMIC >
 }
 
+
 void typeDeclarations() #void :
 {}
 {
@@ -285,9 +295,12 @@ void typeDeclaration() #void :
 }
 
 void classDeclaration() :
-{}
+{Token t;}
 {
-  (classOrInterfaceModifiers())? < CLASS > < ID > (extendsList())? (implementsList())? classBody()
+  (classOrInterfaceModifiers())? < CLASS > t= < ID > (extendsList())? (implementsList())? classBody()
+  {
+    jjtThis.value = t;
+  }
 }
 
 void classOrInterfaceModifiers() #void:
@@ -321,9 +334,12 @@ void implementsList():
 }
 
 void interfaceDeclaration() :
-{}
+{Token t;}
 {
-  (classOrInterfaceModifiers())? < INTERFACE > < ID > (extendsList())? interfaceBody()
+  (classOrInterfaceModifiers())? < INTERFACE > t= < ID > (extendsList())? interfaceBody()
+  {
+    jjtThis.value = t;
+  }
 }
 
 void interfaceBody() :
@@ -351,10 +367,13 @@ void interfaceMemberDeclaration() #void:
 }
 
 void interfaceMemberDeclaration1() #void:
-{}
+{Token t;}
 {
   LOOKAHEAD(2) (variableDeclarator() < SEMIC >) #attributeDeclaration
-  | (methodDeclarator() (throwsConstruct())? < SEMIC >) #abstractMethodDeclaration
+  | (t = methodDeclarator() (throwsConstruct())? < SEMIC >
+  {
+    jjtThis.value = t;
+  }) #abstractMethodDeclaration
 }
 
 void interfaceMemberModifiers() #void :
@@ -375,10 +394,13 @@ void interfaceMemberModifier() #void :
   < PUBLIC > | < STATIC > | < FINAL > | < ABSTRACT >
 }
 
-void methodDeclarator() #void :
-{}
+Token methodDeclarator() #void :
+{Token t;}
 {
-  < ID > < PARTA > (formalParameterList())? < PARTC >
+  t= < ID > < PARTA > formalParameterList() < PARTC >
+  {
+    return t;
+  }
 }
 
 void methodBody() :
@@ -463,10 +485,13 @@ void classMemberDeclaration() #void :
 }
 
 void classMemberDeclaration1() #void:
-{}
+{Token t;}
 {
   LOOKAHEAD(2) (variableDeclarators() < SEMIC >) #fieldDeclaration
-  | (methodDeclarator() (throwsConstruct())? methodBody()) #methodDeclaration
+  | (t = methodDeclarator() (throwsConstruct())? methodBody()
+  {
+    jjtThis.value = t;
+  }) #methodDeclaration
 }
 
 void classMemberModifiers() #void :
@@ -524,22 +549,25 @@ void arrayInitializer() :
   < PARGA > variableInitializers() (< COMMA >)? < PARGC >
 }
 
-void variableInitializers() :
+void variableInitializers() #void :
 {}
 {
   variableInitializer() variableInitializers1()
 }
 
-void variableInitializers1() :
+void variableInitializers1() #void :
 {}
 {
   < COMMA > variableInitializer() variableInitializers1() | {}
 }
 
 void constructorDeclaration() :
-{}
+{Token t;}
 {
-  constructorDeclarator() (throwsConstruct())? constructorBody()
+  t = constructorDeclarator() (throwsConstruct())? constructorBody()
+  {
+    jjtThis.value = t;
+  }
 }
 
 void constructorModifier() #void:
@@ -548,16 +576,19 @@ void constructorModifier() #void:
   < PUBLIC > | < PROTECTED > | < PRIVATE >
 }
 
-void constructorDeclarator() #void:
-{}
+Token constructorDeclarator() #void:
+{Token t;}
 {
-  < ID > < PARTA > (formalParameterList())? < PARTC >
+  t =< ID > < PARTA > formalParameterList() < PARTC >
+  {
+    return t;
+  }
 }
 
 void formalParameterList() :
 {}
 {
-  formalParameter() formalParameterList1()
+  formalParameter() formalParameterList1() | {}
 }
 
 void formalParameterList1() #void:
@@ -663,8 +694,12 @@ void blockStatements1() #void:
 void blockStatement() #void:
 {}
 {
-	 LOOKAHEAD(3) localVariableDeclarationStatement()
-	 | statement()
+  	try {
+	 	(LOOKAHEAD(3) localVariableDeclarationStatement()
+	 	| statement())
+	} catch(ParseException e) {
+		error_skip(SEMIC);
+	}
 }
 
 void localVariableDeclarationStatement() :
@@ -920,7 +955,7 @@ void identifierName1() #void :
 void classInstanceCreationExpression() :
 {}
 {
-	<NEW> classOrInterfaceType() classInstanceCreationExpression1()	
+	<NEW> (classOrInterfaceType() | primitiveType()) classInstanceCreationExpression1()	
 }
 
 void classInstanceCreationExpression1() #void:
@@ -1012,7 +1047,8 @@ void block() #void:
 void statementWithoutTrailingSubstatement() #void:
 {}
 {
-	block()
+  try {
+	(block()
 	| emptyStatement()
 	| expressionStatement()
 	| switchStatement()
@@ -1022,7 +1058,10 @@ void statementWithoutTrailingSubstatement() #void:
 	| returnStatement()
 	| synchronizedStatement()
 	| throwsStatement()
-	| tryStatement()
+	| tryStatement())
+	} catch(ParseException e) {
+		error_skip(SEMIC);
+	}
 }
 
 void emptyStatement():
@@ -1285,4 +1324,19 @@ void constantExpression() :
 {}
 {
 	expression()
+}
+
+JAVACODE 
+void error_skip(int kind) throws ParseException 
+{
+  ParseException e = generateParseException();
+  System.err.println(e.toString());
+  Token t;
+  do
+  {
+    t = getNextToken();
+    if (t.kind == 0) 
+    throw new ParseException("achieved EOF! No sync tokens found.");
+  }
+  while (t.kind != kind);
 }
