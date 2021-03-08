@@ -20,10 +20,8 @@ public class JavaCodeSmellsDetector
 {
   static SymbolTable st= new SymbolTable();
   
-  public static void main(String args []) throws ParseException, IOException
-  {
-    try
-    {
+  public static void main(String args []) throws ParseException, IOException {
+    try {
       FileInputStream file = new FileInputStream("Example.java");
       JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
      
@@ -33,9 +31,7 @@ public class JavaCodeSmellsDetector
       Report report = new Report("MetricsReport.csv", "CodeSmellsReport.csv");
       JavaCodeSmellsDetectorVisitor v = new JavaCodeSmellsDetectorVisitorImplementation();
       astCompilationUnit.jjtAccept(v, report);
-	}
-    catch (Exception e)
-    {
+	} catch (Exception e) {
       System.out.println("Oops.");
       System.out.println(e.getMessage());
     }	
@@ -372,7 +368,7 @@ void interfaceMemberDeclaration() #void:
 void interfaceMemberDeclaration1() #void:
 {Token t;}
 {
-  LOOKAHEAD(2) (variableDeclarator() < SEMIC >) #attributeDeclaration
+  LOOKAHEAD(2) (variableDeclarator(false) < SEMIC >) #attributeDeclaration
   | (t = methodDeclarator() (throwsConstruct())? < SEMIC >
   {
     jjtThis.value = t;
@@ -518,13 +514,13 @@ void classMemberModifier() #void :
 void variableDeclarators(boolean isFieldDeclaration) #void :
 {}
 {
-  variableDeclarator(isFieldDeclaration) variableDeclarators1()
+  variableDeclarator(isFieldDeclaration) variableDeclarators1(isFieldDeclaration)
 }
 
-void variableDeclarators1() #void :
+void variableDeclarators1(boolean isFieldDeclaration) #void :
 {}
 {
-  < COMMA > variableDeclarator() variableDeclarators1() | {}
+  < COMMA > variableDeclarator(isFieldDeclaration) variableDeclarators1(isFieldDeclaration) | {}
 }
 
 void variableDeclarator(boolean isFieldDeclaration) #void :
@@ -532,8 +528,8 @@ void variableDeclarator(boolean isFieldDeclaration) #void :
 {
   t=variableDeclaratorId() variableDeclarator1()
   {
-    if(isFieldDeclaration)
-    	st.install(new SymbolTableEntry(null, t));
+    if (isFieldDeclaration)
+    	install(t, true);
   }
 }
 
@@ -915,10 +911,10 @@ void multiplicativeExpression1() #void:
  <ARITOP_HP> unaryExpression() multiplicativeExpression1() | {}
 }
 
-void unaryExpression() #void:
-{boolean isDotId;}
+void unaryExpression() :
+{}
 {
-	isDotId=identifierName() unaryExpression1(isDotId)
+	identifierName() unaryExpression1()
 	| classInstanceCreationExpression()
 	| literal()
 	| < ARITOP_LP > unaryExpression()
@@ -927,13 +923,13 @@ void unaryExpression() #void:
 	| < PARTA > unaryExpression1bis()
 }
 
-void unaryExpression1(boolean isDotId) #void:
+void unaryExpression1() :
 {}
 {
   <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
   | LOOKAHEAD(2) <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
   | <PARQA> expression() <PARQC> 
-  | ({jjtThis.value=isDotId;}) #directAccessAttribute
+  | {}
 }
 
 void unaryExpression1bis() #void:
@@ -949,14 +945,24 @@ void preIncrDecrExpression() :
 	<ARITOP_LP> <ARITOP_LP> unaryExpression()
 }
 
-boolean identifierName() #void :
-{boolean isDotId;}
+ValueNode identifierName() :
+{boolean isDotId; Token t;}
 {
-	< ID > isDotId = identifierName1(false)
-	{ return isDotId; }
+	t = < ID > isDotId = identifierName1(false)
+	{
+		ValueNode vn = new ValueNode();
+		SymbolTableEntry stE = st.get(t.image);
+		vn.id = t;
+		vn.isAttribute = isDotId;
+		if (stE != null) {
+			vn.isClassMember = stE.isClassMember();
+		}
+		jjtThis.value = vn;
+		return vn;
+	}
 }
 
-boolean identifierName1(boolean isDotId) #void :
+boolean identifierName1(boolean isDotId) :
 {}
 {
 	< DOT > (< ID > | <CLASS>) identifierName1(true) { return true; }
@@ -1351,4 +1357,14 @@ void error_skip(int kind) throws ParseException
     throw new ParseException("achieved EOF! No sync tokens found.");
   }
   while (t.kind != kind);
+}
+
+JAVACODE
+void install(Token t, boolean isClassMember) #void {
+	SymbolTableEntry stE = new SymbolTableEntry(null, t, isClassMember);
+	try {
+		st.install(stE);
+	} catch(Exception e) {
+		System.err.println(e.getMessage());
+	}
 }

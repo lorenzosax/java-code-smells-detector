@@ -6,11 +6,12 @@ public class SymbolTableEntry {
 
 	private Token type;
 	private Token id;
-	private boolean isConst;
+	private boolean isClassMember;
 
-	public SymbolTableEntry(Token type, Token id) {
+	public SymbolTableEntry(Token type, Token id, boolean isClassMember) {
 		this.type = type;
 		this.id = id;
+		this.isClassMember = isClassMember;
 	}
 
 	public Token getType() {
@@ -21,11 +22,7 @@ public class SymbolTableEntry {
 		return id;
 	}
 
-	public boolean isConst() {
-		return isConst;
-	}
-
-	public void setConst(boolean aConst) {
-		isConst = aConst;
+	public boolean isClassMember() {
+		return isClassMember;
 	}
 }

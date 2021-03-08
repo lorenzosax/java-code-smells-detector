@@ -1,95 +1,30 @@
 package main;
 
-import jcc.ASTabstractMethodDeclaration;
-import jcc.ASTarrayInitializer;
-import jcc.ASTassignmentStatement;
-import jcc.ASTattributeDeclaration;
-import jcc.ASTbreakStatement;
-import jcc.ASTcatcheBody;
-import jcc.ASTcatches;
-import jcc.ASTclassBody;
-import jcc.ASTclassDeclaration;
-import jcc.ASTclassInstanceCreationExpression;
-import jcc.ASTcompilationUnit;
-import jcc.ASTconstantExpression;
-import jcc.ASTconstructorBody;
-import jcc.ASTconstructorDeclaration;
-import jcc.ASTcontinueStatement;
-import jcc.ASTdirectAccessAttribute;
-import jcc.ASTdoStatement;
-import jcc.ASTelseStatement;
-import jcc.ASTemptyStatement;
-import jcc.ASTeof;
-import jcc.ASTerror_skip;
-import jcc.ASTexpression;
-import jcc.ASTextendsList;
-import jcc.ASTfieldAccess;
-import jcc.ASTfieldDeclaration;
-import jcc.ASTfinallys;
-import jcc.ASTforInit;
-import jcc.ASTforStatement;
-import jcc.ASTforStatementNoShortIf;
-import jcc.ASTforUpdate;
-import jcc.ASTformalParameter;
-import jcc.ASTformalParameterList;
-import jcc.ASTidentifierName;
-import jcc.ASTifBody;
-import jcc.ASTifThenElseStatementNoShortIf;
-import jcc.ASTifThenStatement;
-import jcc.ASTimplementsList;
-import jcc.ASTimportDeclaration;
-import jcc.ASTinterfaceBody;
-import jcc.ASTinterfaceDeclaration;
-import jcc.ASTlabeledStatement;
-import jcc.ASTlabeledStatementNoShortIf;
-import jcc.ASTlocalVariableDeclarationStatement;
-import jcc.ASTmethodBody;
-import jcc.ASTmethodDeclaration;
-import jcc.ASTmethodInvocation;
-import jcc.ASTpackageDeclaration;
-import jcc.ASTpostIncrDecrExpression;
-import jcc.ASTpreIncrDecrExpression;
-import jcc.ASTreturnStatement;
-import jcc.ASTstatementNoShortIf;
-import jcc.ASTsuperConstruct;
-import jcc.ASTsuperMethod;
-import jcc.ASTswitchBlockStatementGroup;
-import jcc.ASTswitchLabel;
-import jcc.ASTswitchStatement;
-import jcc.ASTsynchronizedStatement;
-import jcc.ASTthisMethod;
-import jcc.ASTthrowsConstruct;
-import jcc.ASTthrowsStatement;
-import jcc.ASTtryBody;
-import jcc.ASTtryStatement;
-import jcc.ASTvariableInitializer;
-import jcc.ASTwhileBody;
-import jcc.ASTwhileCondition;
-import jcc.ASTwhileStatement;
-import jcc.ASTwhileStatementNoShortIf;
-import jcc.JavaCodeSmellsDetectorVisitor;
-import jcc.SimpleNode;
-import jcc.Token;
+import jcc.*;
 
 public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmellsDetectorVisitor {
 
 	private static final int LONG_PARAMETERS_LIST_THRESHOLD = 10;
 	private static final int LONG_METHOD_THRESHOLD = 100;
 	private static final int LARGE_CLASS_THRESHOLD = 1000;
-	private static final int CYCLOMATIC_COMPLEX_THRESHOLD = 50;
+	private static final int CYCLOMATIC_COMPLEX_THRESHOLD = 2;
 	private static final int CYCLOMATIC_COMPLEX_METHOD_THRESHOLD = 20;
-	private static final int ATFD_THRESHOLD = 5;
+	private static final int ATFD_THRESHOLD = 2;
 	private static final int NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD = 3;
+	private static final int TCC_PERCENTAGE_THRESHOLD = 30; // 30%
 	private static Report report;
 	private static String className;
 	private static String currentMethodName;
+	private static Integer numberOfMethods = 0;
 	private static Integer methodStatementsCount = 0;
 	private static Integer classStatementsCount = 0;
 	private static Integer methodCyclomaticComplex = 0;
 	private static Integer classCyclomaticComplex = 0;
 	private static Integer atfdCount = 0;
+	private static Integer methodAccessAttributeOtherClass = 0;
+	private static Integer tccCount = 0;
 	private static Integer methodAccessAttribute = 0;
-	
+
 	@Override
 	public Object visit(SimpleNode node, Object data) {
 		return null;
@@ -106,7 +41,10 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTeof node, Object data) {
-		System.err.println(classStatementsCount);
+		System.err.println("LOC: " + classStatementsCount);
+		System.err.println("NUM METHOD: " + numberOfMethods);
+		System.err.println("TCC_C: " + tccCount);
+		System.err.println("ATFD: " + atfdCount);
 		return null;
 	}
 	
@@ -125,14 +63,15 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTclassDeclaration node, Object data) {
 		classStatementsCount++;
-		className = (String) ((Token) node.jjtGetValue()).image;
+		className = ((Token) node.jjtGetValue()).image;
 		node.childrenAccept(this, data);
 		
 		if(classStatementsCount >= LARGE_CLASS_THRESHOLD)
 			report.appendSmell("Large Class, " + className + ", " + "-" + ", " + "-");
 	
 		if(classCyclomaticComplex >= CYCLOMATIC_COMPLEX_THRESHOLD 
-				&& atfdCount >= ATFD_THRESHOLD)
+				&& atfdCount >= ATFD_THRESHOLD
+				&& ((double)tccCount/(double)numberOfMethods*100) <= TCC_PERCENTAGE_THRESHOLD)
 			report.appendSmell("God Class, " + className + ", " + "-" + ", " + "-");
 	
 		return null;
@@ -153,7 +92,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTinterfaceDeclaration node, Object data) {
 		classStatementsCount++;
-		className = (String) ((Token) node.jjtGetValue()).image;
+		className = ((Token) node.jjtGetValue()).image;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -184,15 +123,18 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTmethodBody node, Object data) {
+		numberOfMethods++;
 		methodStatementsCount = 0;
 		methodCyclomaticComplex = 0;
+		methodAccessAttributeOtherClass = 0;
 		methodAccessAttribute = 0;
 		node.childrenAccept(this, data);
 		classStatementsCount += methodStatementsCount;
 		classCyclomaticComplex += methodCyclomaticComplex;
-		atfdCount += (methodAccessAttribute >= NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD ? 1 : 0);
+		atfdCount += (methodAccessAttributeOtherClass >= NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD ? 1 : 0);
+		tccCount += (methodAccessAttribute > 0 ? 1 : 0);
 		
-		int startLine = (Integer) ((Token) data).beginLine;
+		int startLine = ((Token) data).beginLine;
 		
 		if(methodStatementsCount >= LONG_METHOD_THRESHOLD)
 			report.appendSmell("Long Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
@@ -224,10 +166,8 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTmethodDeclaration node, Object data) {
 		classStatementsCount++;
-		
 		Integer numParameterCount = (Integer) node.jjtGetChild(0).jjtAccept(this, data);
 		Token t = (Token) node.jjtGetValue();
-		
 		currentMethodName = t.image;
 		
 		if(numParameterCount > LONG_PARAMETERS_LIST_THRESHOLD)
@@ -240,7 +180,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTvariableInitializer node, Object data) {
-		// TODO Auto-generated method stub
+		node.childrenAccept(this, data);
 		return null;
 	}
 
@@ -282,15 +222,18 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTconstructorBody node, Object data) {
+		numberOfMethods++;
 		methodStatementsCount = 0;
 		methodCyclomaticComplex = 0;
+		methodAccessAttributeOtherClass = 0;
 		methodAccessAttribute = 0;
 		node.childrenAccept(this, data);
 		classStatementsCount += methodStatementsCount;
 		classCyclomaticComplex += methodCyclomaticComplex;
-		atfdCount += (methodAccessAttribute >= NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD ? 1 : 0);
+		atfdCount += (methodAccessAttributeOtherClass >= NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD ? 1 : 0);
+		tccCount += (methodAccessAttribute > 0 ? 1 : 0);
 		
-		int startLine = (Integer) ((Token) data).beginLine;
+		int startLine = ((Token) data).beginLine;
 		
 		if(methodStatementsCount >= LONG_METHOD_THRESHOLD)
 			report.appendSmell("Long Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
@@ -316,12 +259,13 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTlocalVariableDeclarationStatement node, Object data) {
 		methodStatementsCount++;
+		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTexpression node, Object data) {
-		// TODO Auto-generated method stub
+		node.childrenAccept(this, data);
 		return null;
 	}
 
@@ -332,8 +276,38 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	}
 
 	@Override
+	public Object visit(ASTunaryExpression node, Object data) {
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTunaryExpression1 node, Object data) {
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
 	public Object visit(ASTpreIncrDecrExpression node, Object data) {
 		methodStatementsCount++;
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTidentifierName node, Object data) {
+		node.childrenAccept(this, node.jjtGetValue());
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTidentifierName1 node, Object data) {
+		ValueNode vn = (ValueNode) data;
+		if (vn != null && vn.isClassMember && node.jjtGetNumChildren() > 0) {
+			methodAccessAttribute++;
+		} else if(vn != null && !vn.isClassMember && vn.isAttribute) {
+			methodAccessAttributeOtherClass++;
+		}
 		return null;
 	}
 
@@ -378,6 +352,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTmethodInvocation node, Object data) {
 		methodStatementsCount++;
+		methodAccessAttributeOtherClass--; // to remove false positive due to identifierName
 		return null;
 	}
 
@@ -573,15 +548,4 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTerror_skip node, Object data) {
 		return null;
 	}
-
-	@Override
-	public Object visit(ASTdirectAccessAttribute node, Object data) {
-		if((boolean) node.jjtGetValue() ) {
-			methodAccessAttribute++;
-		}
-			
-		return null;
-	}
-
-
 }
