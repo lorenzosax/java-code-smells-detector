@@ -18,12 +18,15 @@ import main.*;
 
 public class JavaCodeSmellsDetector
 {
+  static SymbolTable st= new SymbolTable();
+  
   public static void main(String args []) throws ParseException, IOException
   {
     try
     {
       FileInputStream file = new FileInputStream("Example.java");
       JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
+     
       ASTcompilationUnit astCompilationUnit = (ASTcompilationUnit) detector.compilationUnit();
       astCompilationUnit.dump("");
 
@@ -487,7 +490,7 @@ void classMemberDeclaration() #void :
 void classMemberDeclaration1() #void:
 {Token t;}
 {
-  LOOKAHEAD(2) (variableDeclarators() < SEMIC >) #fieldDeclaration
+  LOOKAHEAD(2) (variableDeclarators(true) < SEMIC >) #fieldDeclaration
   | (t = methodDeclarator() (throwsConstruct())? methodBody()
   {
     jjtThis.value = t;
@@ -512,10 +515,10 @@ void classMemberModifier() #void :
   < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < FINAL > | < TRANSIENT > | < VOLATILE >
 }
 
-void variableDeclarators() #void :
+void variableDeclarators(boolean isFieldDeclaration) #void :
 {}
 {
-  variableDeclarator() variableDeclarators1()
+  variableDeclarator(isFieldDeclaration) variableDeclarators1()
 }
 
 void variableDeclarators1() #void :
@@ -524,10 +527,14 @@ void variableDeclarators1() #void :
   < COMMA > variableDeclarator() variableDeclarators1() | {}
 }
 
-void variableDeclarator() #void :
-{}
+void variableDeclarator(boolean isFieldDeclaration) #void :
+{Token t;}
 {
-  variableDeclaratorId() variableDeclarator1()
+  t=variableDeclaratorId() variableDeclarator1()
+  {
+    if(isFieldDeclaration)
+    	st.install(new SymbolTableEntry(null, t));
+  }
 }
 
 void variableDeclarator1() #void :
@@ -603,11 +610,14 @@ void formalParameter() :
   type() variableDeclaratorId()
 }
 
-void variableDeclaratorId() #void:
-{}
+Token variableDeclaratorId() #void:
+{Token t = null;}
 {
-  < ID > variableDeclaratorId1()
-  | objectDeclaratorId()
+  (t=< ID > variableDeclaratorId1()
+  | objectDeclaratorId()) //used for: ex. HashMap<String, Integer> var..
+  {
+    return t;
+  }
 }
 
 void objectDeclaratorId() #void:
@@ -711,7 +721,7 @@ void localVariableDeclarationStatement() :
 void localVariableDeclaration() #void:
 {}
 {
-	type() variableDeclarators()
+	type() variableDeclarators(false)
 }
 
 void argumentList() #void:
@@ -906,9 +916,9 @@ void multiplicativeExpression1() #void:
 }
 
 void unaryExpression() #void:
-{}
+{boolean isDotId;}
 {
-	identifierName() unaryExpression1()
+	isDotId=identifierName() unaryExpression1(isDotId)
 	| classInstanceCreationExpression()
 	| literal()
 	| < ARITOP_LP > unaryExpression()
@@ -917,13 +927,13 @@ void unaryExpression() #void:
 	| < PARTA > unaryExpression1bis()
 }
 
-void unaryExpression1() #void:
+void unaryExpression1(boolean isDotId) #void:
 {}
 {
   <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
   | LOOKAHEAD(2) <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
   | <PARQA> expression() <PARQC> 
-  | {}
+  | ({jjtThis.value=isDotId;}) #directAccessAttribute
 }
 
 void unaryExpression1bis() #void:
@@ -939,17 +949,19 @@ void preIncrDecrExpression() :
 	<ARITOP_LP> <ARITOP_LP> unaryExpression()
 }
 
-void identifierName() #void :
-{}
+boolean identifierName() #void :
+{boolean isDotId;}
 {
-	< ID > identifierName1()
+	< ID > isDotId = identifierName1(false)
+	{ return isDotId; }
 }
 
-void identifierName1() #void :
+boolean identifierName1(boolean isDotId) #void :
 {}
 {
-	< DOT > (< ID > | <CLASS>) identifierName1()
-	| {}
+	< DOT > (< ID > | <CLASS>) identifierName1(true) { return true; }
+	| {return isDotId;}
+	
 }
 
 void classInstanceCreationExpression() :

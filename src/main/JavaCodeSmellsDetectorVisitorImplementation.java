@@ -15,6 +15,7 @@ import jcc.ASTconstantExpression;
 import jcc.ASTconstructorBody;
 import jcc.ASTconstructorDeclaration;
 import jcc.ASTcontinueStatement;
+import jcc.ASTdirectAccessAttribute;
 import jcc.ASTdoStatement;
 import jcc.ASTelseStatement;
 import jcc.ASTemptyStatement;
@@ -31,6 +32,7 @@ import jcc.ASTforStatementNoShortIf;
 import jcc.ASTforUpdate;
 import jcc.ASTformalParameter;
 import jcc.ASTformalParameterList;
+import jcc.ASTidentifierName;
 import jcc.ASTifBody;
 import jcc.ASTifThenElseStatementNoShortIf;
 import jcc.ASTifThenStatement;
@@ -74,12 +76,20 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	private static final int LONG_PARAMETERS_LIST_THRESHOLD = 10;
 	private static final int LONG_METHOD_THRESHOLD = 100;
 	private static final int LARGE_CLASS_THRESHOLD = 1000;
+	private static final int CYCLOMATIC_COMPLEX_THRESHOLD = 50;
+	private static final int CYCLOMATIC_COMPLEX_METHOD_THRESHOLD = 20;
+	private static final int ATFD_THRESHOLD = 5;
+	private static final int NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD = 3;
 	private static Report report;
 	private static String className;
 	private static String currentMethodName;
 	private static Integer methodStatementsCount = 0;
 	private static Integer classStatementsCount = 0;
-
+	private static Integer methodCyclomaticComplex = 0;
+	private static Integer classCyclomaticComplex = 0;
+	private static Integer atfdCount = 0;
+	private static Integer methodAccessAttribute = 0;
+	
 	@Override
 	public Object visit(SimpleNode node, Object data) {
 		return null;
@@ -120,6 +130,10 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 		
 		if(classStatementsCount >= LARGE_CLASS_THRESHOLD)
 			report.appendSmell("Large Class, " + className + ", " + "-" + ", " + "-");
+	
+		if(classCyclomaticComplex >= CYCLOMATIC_COMPLEX_THRESHOLD 
+				&& atfdCount >= ATFD_THRESHOLD)
+			report.appendSmell("God Class, " + className + ", " + "-" + ", " + "-");
 	
 		return null;
 	}
@@ -171,13 +185,20 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTmethodBody node, Object data) {
 		methodStatementsCount = 0;
+		methodCyclomaticComplex = 0;
+		methodAccessAttribute = 0;
 		node.childrenAccept(this, data);
 		classStatementsCount += methodStatementsCount;
+		classCyclomaticComplex += methodCyclomaticComplex;
+		atfdCount += (methodAccessAttribute >= NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD ? 1 : 0);
 		
 		int startLine = (Integer) ((Token) data).beginLine;
 		
 		if(methodStatementsCount >= LONG_METHOD_THRESHOLD)
 			report.appendSmell("Long Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
+		
+		if(methodCyclomaticComplex >= CYCLOMATIC_COMPLEX_METHOD_THRESHOLD)
+			report.appendSmell("Complex Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
 	
 		return null;
 	}
@@ -262,13 +283,20 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTconstructorBody node, Object data) {
 		methodStatementsCount = 0;
+		methodCyclomaticComplex = 0;
+		methodAccessAttribute = 0;
 		node.childrenAccept(this, data);
 		classStatementsCount += methodStatementsCount;
+		classCyclomaticComplex += methodCyclomaticComplex;
+		atfdCount += (methodAccessAttribute >= NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD ? 1 : 0);
 		
 		int startLine = (Integer) ((Token) data).beginLine;
 		
 		if(methodStatementsCount >= LONG_METHOD_THRESHOLD)
 			report.appendSmell("Long Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
+		
+		if(methodCyclomaticComplex >= CYCLOMATIC_COMPLEX_METHOD_THRESHOLD)
+			report.appendSmell("Complex Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
 	
 		return null;
 	}
@@ -362,6 +390,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTifThenStatement node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -382,6 +411,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTifThenElseStatementNoShortIf node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -396,19 +426,20 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTswitchBlockStatementGroup node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTswitchLabel node, Object data) {
-		methodStatementsCount++;
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTwhileStatement node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -427,6 +458,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTwhileStatementNoShortIf node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -434,6 +466,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTdoStatement node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -441,6 +474,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTforStatement node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -448,6 +482,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTforStatementNoShortIf node, Object data) {
 		methodStatementsCount++;
+		methodCyclomaticComplex++;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -538,5 +573,15 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTerror_skip node, Object data) {
 		return null;
 	}
+
+	@Override
+	public Object visit(ASTdirectAccessAttribute node, Object data) {
+		if((boolean) node.jjtGetValue() ) {
+			methodAccessAttribute++;
+		}
+			
+		return null;
+	}
+
 
 }

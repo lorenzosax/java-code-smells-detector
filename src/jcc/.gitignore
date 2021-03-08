@@ -81,3 +81,5 @@
 /JavaCodeSmellsDetectorVisitor.java
 /ASTerror_skip.java
 /ASTeof.java
+/ASTidentifierName.java
+/ASTdirectAccessAttribute.java
