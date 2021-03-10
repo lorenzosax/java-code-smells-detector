@@ -2,8 +2,14 @@ package main;
 
 import jcc.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmellsDetectorVisitor {
 
+	private static final String DELIMITER = "@";
 	private static final int LONG_PARAMETERS_LIST_THRESHOLD = 10;
 	private static final int LONG_METHOD_THRESHOLD = 100;
 	private static final int LARGE_CLASS_THRESHOLD = 1000;
@@ -12,9 +18,12 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	private static final int ATFD_THRESHOLD = 2;
 	private static final int NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD = 3;
 	private static final int TCC_PERCENTAGE_THRESHOLD = 30; // 30%
+	private static final int DUPLICATE_CODE_STMTS_THRESHOLD = 3;
+	private static Map<String, List<String>> methodStmtsMap = new HashMap<>();
 	private static Report report;
 	private static String className;
 	private static String currentMethodName;
+	private static String currentMethodBodyString;
 	private static Integer numberOfMethods = 0;
 	private static Integer methodStatementsCount = 0;
 	private static Integer classStatementsCount = 0;
@@ -41,10 +50,20 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTeof node, Object data) {
-		System.err.println("LOC: " + classStatementsCount);
-		System.err.println("NUM METHOD: " + numberOfMethods);
-		System.err.println("TCC_C: " + tccCount);
-		System.err.println("ATFD: " + atfdCount);
+		for (Map.Entry<String, List<String>> entry : methodStmtsMap.entrySet()) {
+			List<String> methodsNameList = entry.getValue();
+			if (methodsNameList.size() > 1) {
+				for (String m : methodsNameList) {
+					String[] s = m.split(DELIMITER);
+					report.appendSmell("Duplicate Code, " + className + ", " + s[0] + ", " + s[1]);
+				}
+			}
+		}
+		report.appendMetric("Number of Methods, " + numberOfMethods);
+		report.appendMetric("Number of Class's messages, " + numberOfMethods); // TODO
+		report.appendMetric("Number of instance variables, " + numberOfMethods); // TODO
+		report.appendMetric("Number of static variables, " + numberOfMethods); // TODO
+		report.appendMetric("Ratio PrivateMethods/PublicMethods, " + numberOfMethods); // TODO
 		return null;
 	}
 	
@@ -124,6 +143,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTmethodBody node, Object data) {
 		numberOfMethods++;
+		currentMethodBodyString = "";
 		methodStatementsCount = 0;
 		methodCyclomaticComplex = 0;
 		methodAccessAttributeOtherClass = 0;
@@ -133,15 +153,24 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 		classCyclomaticComplex += methodCyclomaticComplex;
 		atfdCount += (methodAccessAttributeOtherClass >= NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD ? 1 : 0);
 		tccCount += (methodAccessAttribute > 0 ? 1 : 0);
-		
+
 		int startLine = ((Token) data).beginLine;
 		
 		if(methodStatementsCount >= LONG_METHOD_THRESHOLD)
-			report.appendSmell("Long Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
+			report.appendSmell("Long Method, " + className + ", " + currentMethodName + ", " + startLine);
 		
 		if(methodCyclomaticComplex >= CYCLOMATIC_COMPLEX_METHOD_THRESHOLD)
-			report.appendSmell("Complex Method, " + className + ", " + currentMethodName + ", " + Integer.toString(startLine));
-	
+			report.appendSmell("Complex Method, " + className + ", " + currentMethodName + ", " + startLine);
+
+		if (methodStatementsCount > DUPLICATE_CODE_STMTS_THRESHOLD) { // because duplicate code must be major than 3 LOC
+			List<String> methodsName = methodStmtsMap.get(currentMethodBodyString);
+			if (methodsName == null) {
+				methodsName = new ArrayList<>();
+			}
+			methodsName.add(currentMethodName + DELIMITER + startLine);
+			methodStmtsMap.put(currentMethodBodyString, methodsName);
+		}
+
 		return null;
 	}
 
@@ -183,6 +212,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTvariableInitializer node, Object data) {
+		currentMethodBodyString += "ASTvariableInitializer";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -190,12 +220,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTarrayInitializer node, Object data) {
 		// TODO Auto-generated method stub
+		currentMethodBodyString += "ASTarrayInitializer";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTconstructorDeclaration node, Object data) {
 		classStatementsCount++;
+		currentMethodBodyString += "ASTconstructorDeclaration";
 		Integer numParameterCount = (Integer) node.jjtGetChild(0).jjtAccept(this, data);
 		Token t = (Token) node.jjtGetValue();
 		currentMethodName = t.image;
@@ -250,42 +282,89 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTthisMethod node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTthisMethod";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTsuperMethod node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTsuperMethod";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTlocalVariableDeclarationStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTlocalVariableDeclarationStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
+	public Object visit(ASTargumentList node, Object data) {
+		currentMethodBodyString += "ASTargumentList";
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTargument node, Object data) {
+		currentMethodBodyString += "ASTargument";
+		return null;
+	}
+
+	@Override
 	public Object visit(ASTexpression node, Object data) {
+		currentMethodBodyString += "ASTexpression";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTfieldAccess node, Object data) {
-		// TODO Auto-generated method stub
+		currentMethodBodyString += "ASTfieldAccess";
 		return null;
 	}
 
 	@Override
-	public Object visit(ASTunaryExpression node, Object data) {
+	public Object visit(ASTand node, Object data) {
+		currentMethodBodyString += "ASTand";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
-	public Object visit(ASTunaryExpression1 node, Object data) {
+	public Object visit(ASTor node, Object data) {
+		currentMethodBodyString += "ASTor";
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTlogicalOperand node, Object data) {
+		currentMethodBodyString += "ASTlogicalOperand";
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTaritop_lp node, Object data) {
+		currentMethodBodyString += "ASTaritop_lp";
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTaritop_hp node, Object data) {
+		currentMethodBodyString += "ASTaritop_hp";
+		node.childrenAccept(this, data);
+		return null;
+	}
+
+	@Override
+	public Object visit(ASTunaryExpression node, Object data) {
+		currentMethodBodyString += "ASTunaryExpression";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -293,18 +372,21 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTpreIncrDecrExpression node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTpreIncrDecrExpression";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTidentifierName node, Object data) {
+		currentMethodBodyString += "ASTidentifierName";
 		node.childrenAccept(this, node.jjtGetValue());
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTidentifierName1 node, Object data) {
+		currentMethodBodyString += "ASTidentifierName1";
 		ValueNode vn = (ValueNode) data;
 		if (vn != null && vn.isClassMember) {
 			methodAccessAttribute++;
@@ -318,12 +400,13 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTclassInstanceCreationExpression node, Object data) {
-		// TODO Auto-generated method stub
+		currentMethodBodyString += "ASTclassInstanceCreationExpression";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTstatementNoShortIf node, Object data) {
+		currentMethodBodyString += "ASTstatementNoShortIf";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -331,12 +414,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTemptyStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTemptyStatement";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTlabeledStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTlabeledStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -344,6 +429,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTlabeledStatementNoShortIf node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTlabeledStatementNoShortIf";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -351,6 +437,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTassignmentStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTassignmentStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -359,12 +446,15 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTmethodInvocation node, Object data) {
 		methodStatementsCount++;
 		methodAccessAttributeOtherClass--; // to remove false positive due to identifierName
+		currentMethodBodyString += "ASTmethodInvocation";
+		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTpostIncrDecrExpression node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTpostIncrDecrExpression";
 		return null;
 	}
 
@@ -372,12 +462,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTifThenStatement node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTifThenStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTifBody node, Object data) {
+		currentMethodBodyString += "ASTifBody";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -385,6 +477,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTelseStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTelseStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -393,6 +486,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTifThenElseStatementNoShortIf node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTifThenElseStatementNoShortIf";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -400,6 +494,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTswitchStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTswitchStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -408,12 +503,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTswitchBlockStatementGroup node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTswitchBlockStatementGroup";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTswitchLabel node, Object data) {
+		currentMethodBodyString += "ASTswitchLabel";
 		return null;
 	}
 
@@ -421,17 +518,20 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTwhileStatement node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTwhileStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTwhileCondition node, Object data) {
+		currentMethodBodyString += "ASTwhileCondition";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTwhileBody node, Object data) {
+		currentMethodBodyString += "ASTwhileBody";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -440,6 +540,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTwhileStatementNoShortIf node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTwhileStatementNoShortIf";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -448,6 +549,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTdoStatement node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTdoStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -456,6 +558,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTforStatement node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTforStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -464,37 +567,41 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	public Object visit(ASTforStatementNoShortIf node, Object data) {
 		methodStatementsCount++;
 		methodCyclomaticComplex++;
+		currentMethodBodyString += "ASTforStatementNoShortIf";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTforInit node, Object data) {
-		// TODO Auto-generated method stub
+		currentMethodBodyString += "ASTforInit";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTforUpdate node, Object data) {
-		// TODO Auto-generated method stub
+		currentMethodBodyString += "ASTforUpdate";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTbreakStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTbreakStatement";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTcontinueStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTcontinueStatement";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTreturnStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTreturnStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -502,12 +609,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTthrowsStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTthrowsStatement";
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTsynchronizedStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTsynchronizedStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -515,12 +624,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTtryStatement node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTtryStatement";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTtryBody node, Object data) {
+		currentMethodBodyString += "ASTtryBody";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -528,12 +639,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTcatches node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTcatches";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTcatcheBody node, Object data) {
+		currentMethodBodyString += "ASTcatcheBody";
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -541,12 +654,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTfinallys node, Object data) {
 		methodStatementsCount++;
+		currentMethodBodyString += "ASTfinallys";
 		node.childrenAccept(this, data);
 		return null;
 	}
 
 	@Override
 	public Object visit(ASTconstantExpression node, Object data) {
+		currentMethodBodyString += "ASTconstantExpression";
 		node.childrenAccept(this, data);
 		return null;
 	}

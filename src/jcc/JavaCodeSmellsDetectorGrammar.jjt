@@ -720,16 +720,17 @@ void localVariableDeclaration() #void:
 	type() variableDeclarators(false)
 }
 
-void argumentList() #void:
+void argumentList() :
 {}
 {
-	expression() argumentList1()
+	((expression()) #argument) argumentList1()
 }
 
 void argumentList1() #void :
 {}
 {
-  <COMMA> expression() argumentList1() | {}
+  (<COMMA> expression() argumentList1()) #argument
+  | {}
 }
 
 void expression() :
@@ -778,101 +779,6 @@ void assignmentOperator() #void:
   < MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
 }
 
-void conditionalExpression() #void :
-{}
-{
-	conditionalOrExpression() 
-}
-
-void conditionalOrExpression() #void:
-{}
-{
-	conditionalAndExpression() conditionalOrExpression1()
-}
-
-void conditionalOrExpression1() #void:
-{}
-{
-  <OR> conditionalAndExpression() conditionalOrExpression1() | {}
-}
-
-void conditionalAndExpression() #void :
-{}
-{
-	inclusiveOrExpression() conditionalAndExpression1()
-}
-
-void conditionalAndExpression1() #void:
-{}
-{
-	<AND> inclusiveOrExpression() conditionalAndExpression1() | {}
-}
-
-void inclusiveOrExpression() #void:
-{}
-{
-	exclusiveOrExpression() inclusiveOrExpression1()
-}
-
-void inclusiveOrExpression1() #void:
-{}
-{
-	<OR> exclusiveOrExpression() inclusiveOrExpression1() | {}
-}
-
-
-void exclusiveOrExpression() #void:
-{}
-{
-	andExpression() exclusiveOrExpression1()
-}
-
-void exclusiveOrExpression1() #void:
-{}
-{
-	<EXP> andExpression() exclusiveOrExpression1() | {}
-}
-
-void andExpression() #void:
-{}
-{
-	equalityExpression() andExpression1()
-}
-
-void andExpression1() #void:
-{}
-{
-  <AND> equalityExpression() andExpression1() | {}
-}
-
-void equalityExpression() #void:
-{}
-{
-	relationalExpression() equalityExpression1()
-}
-
-void equalityExpression1() #void:
-{}
-{
-  (<MAJOR> | <MINOR> | <RELOP>) relationalExpression() equalityExpression1() | {}
-}
-
-void relationalExpression() #void:
-{}
-{
-	additiveExpression() relationalExpression1()
-}
-
-void relationalExpression1() #void:
-{}
-{
-	<MAJOR> additiveExpression() relationalExpression1()
-	| <MINOR> additiveExpression() relationalExpression1()
-	| <RELOP> additiveExpression() relationalExpression1()
-	| <INSTANCEOF> referenceType() relationalExpression1()
-	| {}
-}
-
 void referenceType() #void:
 {}
 {
@@ -883,32 +789,56 @@ void referenceType1() #void :
 {}
 {
   < PARQA > < PARQC > referenceType1()
-  | {} 
+  | {}
 }
 
-void additiveExpression() #void:
+void conditionalExpression() #void :
 {}
 {
-  multiplicativeExpression() additiveExpression1()
+	exprLogical()
 }
 
-void additiveExpression1() #void:
+void exprLogical() #void :
 {}
 {
-  <ARITOP_LP> multiplicativeExpression() additiveExpression1() | {}
+  andExpression()
 }
 
-void multiplicativeExpression() #void:
+void andExpression() #void :
 {}
 {
-  unaryExpression() multiplicativeExpression1()
+  	(orExpression() ( <AND> orExpression() )*) #and(>1)
 }
 
-void multiplicativeExpression1() #void:
+void orExpression() #void :
 {}
 {
+  (logicalOperand() ( <OR> logicalOperand() )*) #or(>1)
+}
 
- <ARITOP_HP> unaryExpression() multiplicativeExpression1() | {}
+void logicalOperand() :
+{}
+{
+	expr() (LOOKAHEAD(2)(<RELOP> | <MAJOR> | <MINOR> | <INSTANCEOF>) expr())?
+}
+
+void expr() #void :
+{}
+{
+  lowPriorityExpression()
+}
+
+void lowPriorityExpression() #void :
+{}
+{
+  (highPriorityExpression() ( <ARITOP_LP> highPriorityExpression() )*) #aritop_lp(>1)
+}
+
+
+void highPriorityExpression() #void :
+{}
+{
+ 	(unaryExpression() ( <ARITOP_HP> unaryExpression() )*) #aritop_hp(>1)
 }
 
 void unaryExpression() :
@@ -924,7 +854,7 @@ void unaryExpression() :
 	| < PARTA > unaryExpression1bis()
 }
 
-void unaryExpression1() :
+void unaryExpression1() #void:
 {}
 {
   (<PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?) #methodInvocation
