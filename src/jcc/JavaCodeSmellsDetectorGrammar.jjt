@@ -919,6 +919,7 @@ void unaryExpression() :
 	| literal()
 	| < ARITOP_LP > unaryExpression()
 	| < NOT > unaryExpression()
+	| LOOKAHEAD(2) <THIS> <DOT> unaryExpression()
 	| <THIS>
 	| < PARTA > unaryExpression1bis()
 }
@@ -926,9 +927,9 @@ void unaryExpression() :
 void unaryExpression1() :
 {}
 {
-  <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
+  (<PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?) #methodInvocation
   | LOOKAHEAD(2) <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
-  | <PARQA> expression() <PARQC> 
+  | (<PARQA> expression() <PARQC>) #methodInvocation
   | {}
 }
 

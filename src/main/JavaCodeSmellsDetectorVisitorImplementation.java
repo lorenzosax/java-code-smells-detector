@@ -172,9 +172,12 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 		
 		if(numParameterCount > LONG_PARAMETERS_LIST_THRESHOLD)
 			report.appendSmell("Long Parameters List, " + className + ", " + currentMethodName + ", " + t.beginLine);
-		
-		node.jjtGetChild(1).jjtAccept(this, t);
-		
+
+		int totChild = node.jjtGetNumChildren();
+		for (int i = 1; i < totChild; i++) {
+			node.jjtGetChild(i).jjtAccept(this, t);
+		}
+
 		return null;
 	}
 
@@ -303,9 +306,11 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTidentifierName1 node, Object data) {
 		ValueNode vn = (ValueNode) data;
-		if (vn != null && vn.isClassMember && node.jjtGetNumChildren() > 0) {
+		if (vn != null && vn.isClassMember) {
 			methodAccessAttribute++;
-		} else if(vn != null && !vn.isClassMember && vn.isAttribute) {
+			if (vn.isAttribute)
+				methodAccessAttributeOtherClass++;
+		} else if(vn != null && vn.isAttribute) {
 			methodAccessAttributeOtherClass++;
 		}
 		return null;
@@ -346,6 +351,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTassignmentStatement node, Object data) {
 		methodStatementsCount++;
+		node.childrenAccept(this, data);
 		return null;
 	}
 
@@ -489,6 +495,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTreturnStatement node, Object data) {
 		methodStatementsCount++;
+		node.childrenAccept(this, data);
 		return null;
 	}
 
@@ -540,7 +547,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTconstantExpression node, Object data) {
-		// TODO Auto-generated method stub
+		node.childrenAccept(this, data);
 		return null;
 	}
 
