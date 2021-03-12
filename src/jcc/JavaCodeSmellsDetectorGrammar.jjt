@@ -22,7 +22,7 @@ public class JavaCodeSmellsDetector
   
   public static void main(String args []) throws ParseException, IOException {
     try {
-      FileInputStream file = new FileInputStream("Example.java");
+      FileInputStream file = new FileInputStream(args[0]);
       JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
      
       ASTcompilationUnit astCompilationUnit = (ASTcompilationUnit) detector.compilationUnit();
@@ -465,38 +465,44 @@ void classBodyDeclarations1() #void :
 }
 
 void classBodyDeclaration() #void:
-{}
+{Token t = null;}
 {
-  (classMemberModifiers())? classBodyDeclaration1()
+  (t = classMemberModifiers())? classBodyDeclaration1(t)
 }
 
-void classBodyDeclaration1() #void:
+void classBodyDeclaration1(Token t) #void:
 {}
 {
-  LOOKAHEAD(2) classMemberDeclaration()
-  | constructorDeclaration()
+  LOOKAHEAD(2) classMemberDeclaration(t)
+  | constructorDeclaration(t)
 }
 
-void classMemberDeclaration() #void :
+void classMemberDeclaration(Token t) #void :
 {}
 {
-  type() classMemberDeclaration1()
+  type() classMemberDeclaration1(t)
 }
 
-void classMemberDeclaration1() #void:
-{Token t;}
+void classMemberDeclaration1(Token m) #void:
+{Token t = null;}
 {
   LOOKAHEAD(2) (variableDeclarators(true) < SEMIC >) #fieldDeclaration
   | (t = methodDeclarator() (throwsConstruct())? methodBody()
   {
-    jjtThis.value = t;
+    ValueNode vn = new ValueNode();
+    vn.id = t;
+    vn.modifier = m;
+    jjtThis.value = vn;
   }) #methodDeclaration
 }
 
-void classMemberModifiers() #void :
-{}
+Token classMemberModifiers() #void :
+{Token t = null;}
 {
-  classMemberModifier() classMemberModifiers1()
+  (t=classMemberModifier() classMemberModifiers1())
+  {
+    return t;
+  }
 }
 
 void classMemberModifiers1() #void :
@@ -505,10 +511,13 @@ void classMemberModifiers1() #void :
   classMemberModifier() classMemberModifiers1() | {}
 }
 
-void classMemberModifier() #void :
-{}
+Token classMemberModifier() #void :
+{Token t = null;}
 {
-  < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < FINAL > | < TRANSIENT > | < VOLATILE >
+  (t = < PUBLIC > | t = < PROTECTED > | t =  < PRIVATE > | t = < STATIC > | t = < FINAL > | t =  < TRANSIENT > | t =  < VOLATILE >)
+  	{
+ 	  return t;
+ 	} 
 }
 
 void variableDeclarators(boolean isFieldDeclaration) #void :
@@ -564,12 +573,15 @@ void variableInitializers1() #void :
   < COMMA > variableInitializer() variableInitializers1() | {}
 }
 
-void constructorDeclaration() :
-{Token t;}
+void constructorDeclaration(Token m) :
+{Token t = null;}
 {
-  t = constructorDeclarator() (throwsConstruct())? constructorBody()
+  (t = constructorDeclarator() (throwsConstruct())? constructorBody())
   {
-    jjtThis.value = t;
+    ValueNode vn = new ValueNode();
+    vn.modifier = m;
+    vn.id = t;
+    jjtThis.value = vn;
   }
 }
 
@@ -842,9 +854,9 @@ void highPriorityExpression() #void :
 }
 
 void unaryExpression() :
-{}
+{ValueNode vn = null;}
 {
-	identifierName() unaryExpression1()
+	vn = identifierName() unaryExpression1(vn)
 	| classInstanceCreationExpression()
 	| literal()
 	| < ARITOP_LP > unaryExpression()
@@ -854,12 +866,18 @@ void unaryExpression() :
 	| < PARTA > unaryExpression1bis()
 }
 
-void unaryExpression1() #void:
+void unaryExpression1(ValueNode vn) #void:
 {}
 {
-  (<PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?) #methodInvocation
+  ((<PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?)
+  {
+    jjtThis.value = vn;
+  }) #methodInvocation
   | LOOKAHEAD(2) <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
-  | (<PARQA> expression() <PARQC>) #methodInvocation
+  | ((<PARQA> expression() <PARQC>)
+  {
+    jjtThis.value = vn;
+  }) #methodInvocation
   | {}
 }
 
@@ -1039,17 +1057,23 @@ void expressionStatement() #void :
 
 
 void statementExpression() #void:
-{}
+{ValueNode vn = null;}
 {
-	identifierName()
+	vn = identifierName()
 		((assignmentOperator() assignmentExpression()) #assignmentStatement
-		| (<PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
+		| ((<PARTA> (argumentList())? <PARTC> methodInvocation1())
+			{
+		  		jjtThis.value = vn;
+			}) #methodInvocation
 		| (<ARITOP_LP> <ARITOP_LP>) #postIncrDecrExpression
 		| (<PARQA> expression() <PARQC> assignmentOperator() assignmentExpression())
 		)
 
 	| LOOKAHEAD(4) (fieldAccess() assignmentOperator() assignmentExpression()) #assignmentStatement
-    | LOOKAHEAD(4) (<THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
+    | LOOKAHEAD(4) ((<THIS> <DOT> vn = identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1())
+      	{
+    		jjtThis.value = vn;
+  		}) #methodInvocation
     | (<SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
 
 	| preIncrDecrExpression()
@@ -1058,11 +1082,14 @@ void statementExpression() #void:
 }
 
 void methodInvocation() :
-{}
+{ValueNode vn = null;}
 {
-	 LOOKAHEAD(2) identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | <THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 (LOOKAHEAD(2) vn=identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <THIS> <DOT> vn = identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1())
+	 	{
+    		jjtThis.value = vn;
+    	}
 }
 
 void methodInvocation1() #void:

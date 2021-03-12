@@ -11,11 +11,11 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	private static final String DELIMITER = "@";
 	private static final int LONG_PARAMETERS_LIST_THRESHOLD = 10;
-	private static final int LONG_METHOD_THRESHOLD = 100;
-	private static final int LARGE_CLASS_THRESHOLD = 1000;
-	private static final int CYCLOMATIC_COMPLEX_THRESHOLD = 2;
-	private static final int CYCLOMATIC_COMPLEX_METHOD_THRESHOLD = 20;
-	private static final int ATFD_THRESHOLD = 2;
+	private static final int LONG_METHOD_THRESHOLD = 80;
+	private static final int LARGE_CLASS_THRESHOLD = 300;
+	private static final int CYCLOMATIC_COMPLEX_THRESHOLD = 48;
+	private static final int CYCLOMATIC_COMPLEX_METHOD_THRESHOLD = 21;
+	private static final int ATFD_THRESHOLD = 6;
 	private static final int NUM_ACCESS_ATTRIBUTE_METHOD_THRESHOLD = 3;
 	private static final int TCC_PERCENTAGE_THRESHOLD = 30; // 30%
 	private static final int DUPLICATE_CODE_STMTS_THRESHOLD = 3;
@@ -33,6 +33,10 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	private static Integer methodAccessAttributeOtherClass = 0;
 	private static Integer tccCount = 0;
 	private static Integer methodAccessAttribute = 0;
+	private static Integer numberOfClassMessages = 0;
+	private static Integer globalVariables = 0;
+	private static Integer publicMethods = 0;
+	private static Integer privateMethods = 0;
 
 	@Override
 	public Object visit(SimpleNode node, Object data) {
@@ -60,10 +64,15 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 			}
 		}
 		report.appendMetric("Number of Methods, " + numberOfMethods);
-		report.appendMetric("Number of Class's messages, " + numberOfMethods); // TODO
-		report.appendMetric("Number of instance variables, " + numberOfMethods); // TODO
-		report.appendMetric("Number of static variables, " + numberOfMethods); // TODO
-		report.appendMetric("Ratio PrivateMethods/PublicMethods, " + numberOfMethods); // TODO
+		report.appendMetric("Number of Class's messages, " + numberOfClassMessages);
+		report.appendMetric("Number of Global variables, " + globalVariables);
+		
+		if(publicMethods == 0)
+			report.appendMetric("Ratio PrivateMethods/PublicMethods, NaN");
+		else
+			report.appendMetric("Ratio PrivateMethods/PublicMethods, " + (double) privateMethods/publicMethods);
+		
+		
 		return null;
 	}
 	
@@ -188,6 +197,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTfieldDeclaration node, Object data) {
+		globalVariables++;
 		classStatementsCount++;
 		return null;
 	}
@@ -195,9 +205,12 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTmethodDeclaration node, Object data) {
 		classStatementsCount++;
+		
 		Integer numParameterCount = (Integer) node.jjtGetChild(0).jjtAccept(this, data);
-		Token t = (Token) node.jjtGetValue();
+		ValueNode vn = (ValueNode) node.jjtGetValue();
+		Token t = vn.id;
 		currentMethodName = t.image;
+		countMethodModifiers(vn.modifier);
 		
 		if(numParameterCount > LONG_PARAMETERS_LIST_THRESHOLD)
 			report.appendSmell("Long Parameters List, " + className + ", " + currentMethodName + ", " + t.beginLine);
@@ -229,15 +242,29 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 		classStatementsCount++;
 		currentMethodBodyString += "ASTconstructorDeclaration";
 		Integer numParameterCount = (Integer) node.jjtGetChild(0).jjtAccept(this, data);
-		Token t = (Token) node.jjtGetValue();
+		ValueNode vn = (ValueNode) node.jjtGetValue();
+		Token t = vn.id;
 		currentMethodName = t.image;
+		countMethodModifiers(vn.modifier);
 		
 		if(numParameterCount > LONG_PARAMETERS_LIST_THRESHOLD)
 			report.appendSmell("Long Parameters List, " + className + ", " + currentMethodName + ", " + t.beginLine);
 		
-		node.jjtGetChild(1).jjtAccept(this, t);
+		int totChild = node.jjtGetNumChildren();
+		for (int i = 1; i < totChild; i++) {
+			node.jjtGetChild(i).jjtAccept(this, t);
+		}
 		return null;
 	}
+	
+	private void countMethodModifiers(Token m) {
+		if(m != null && m.kind == JavaCodeSmellsDetectorConstants.PUBLIC) {
+			publicMethods++;
+		} else if(m != null && m.kind == JavaCodeSmellsDetectorConstants.PRIVATE) {
+			privateMethods++;
+		}
+	}
+	
 
 	@Override
 	public Object visit(ASTformalParameterList node, Object data) {
@@ -447,6 +474,12 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 		methodStatementsCount++;
 		methodAccessAttributeOtherClass--; // to remove false positive due to identifierName
 		currentMethodBodyString += "ASTmethodInvocation";
+		
+		ValueNode vn = (ValueNode) node.jjtGetValue();
+		if(vn != null && vn.isAttribute) {
+			numberOfClassMessages++;
+		}
+		
 		node.childrenAccept(this, data);
 		return null;
 	}

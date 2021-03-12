@@ -83,3 +83,14 @@
 /ASTeof.java
 /ASTidentifierName.java
 /ASTdirectAccessAttribute.java
+/ASTidentifierName1.java
+/ASTunaryExpression.java
+/ASTunaryExpression1.java
+/ASTand.java
+/ASTargument.java
+/ASTargumentList.java
+/ASTaritop_hp.java
+/ASTaritop_lp.java
+/ASTlogicalOperand.java
+/ASTor.java
+/ASTclassMemberModifier.java
