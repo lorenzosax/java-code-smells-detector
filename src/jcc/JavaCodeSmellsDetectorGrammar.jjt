@@ -4,6 +4,8 @@
 options
 {
   static = true;
+  multi = true;
+  visitor = true;
 }
 
 PARSER_BEGIN(JavaCodeSmellsDetector)
@@ -12,21 +14,24 @@ package jcc;
 
 import java.io.*;
 import java.util.*;
+import main.*;
 
 public class JavaCodeSmellsDetector
 {
-  public static void main(String args []) throws ParseException, IOException
-  {
-    try
-    {
-      FileInputStream file = new FileInputStream("Example.java");
-      
+  static SymbolTable st= new SymbolTable();
+  
+  public static void main(String args []) throws ParseException, IOException {
+    try {
+      FileInputStream file = new FileInputStream(args[0]);
       JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
-      SimpleNode sn = detector.compilationUnit();
-      sn.dump("");
-	}
-    catch (Exception e)
-    {
+     
+      ASTcompilationUnit astCompilationUnit = (ASTcompilationUnit) detector.compilationUnit();
+      astCompilationUnit.dump("");
+
+      Report report = new Report("MetricsReport.csv", "CodeSmellsReport.csv");
+      JavaCodeSmellsDetectorVisitor v = new JavaCodeSmellsDetectorVisitorImplementation();
+      astCompilationUnit.jjtAccept(v, report);
+	} catch (Exception e) {
       System.out.println("Oops.");
       System.out.println(e.getMessage());
     }	
@@ -70,8 +75,7 @@ SKIP :
 | < ~[ ] >
 }
 
-/* RESERVED WORDS*/
-TOKEN :
+TOKEN : /* RESERVED WORDS*/
 {
   < ABSTRACT: "abstract" >
 | < ASSERT: "assert" >
@@ -138,8 +142,7 @@ TOKEN :
 | < TRANSITIVE: "transitive" >
 }
 
-/* NUMBERS */
-TOKEN : 
+TOKEN : /* NUMBERS */
 {
   < #DIGIT : [ "0"-"9" ] >
 | < #DIGITS : (< DIGIT >)+ >
@@ -151,7 +154,7 @@ TOKEN :
 | < NUM : < DIGITS > < OPT_FRANCTION > < OPT_EXPONENT > >
 }
 
-TOKEN :
+TOKEN : /* IDENTIFIERS */
 {
   < ID :
     [ "A"-"Z", "a"-"z", "_" ]
@@ -161,8 +164,7 @@ TOKEN :
     )* >
 }
 
-/* OPERATORS*/
-TOKEN: 
+TOKEN: /* OPERATORS*/
 {
  
  < ARITOP_LP :
@@ -191,7 +193,7 @@ TOKEN : /* PUNCTUATION SIMBOLS */
 | < COMMA : "," >
 }
 
-TOKEN :
+TOKEN : /* SIMBOLS */
 {
   < QMARK : "?" >
   | < DPOINTS: ":" >
@@ -215,7 +217,7 @@ TOKEN :
     ) >
 }
 
-TOKEN :
+TOKEN : /* CHARACTERS */
 {
 	< LITERAL : "\"" (~["\n","\r"])* "\"" >
 	| < CHARVALUE : "\'" (~[ "\n", "\r" ]) "\'" >
@@ -224,10 +226,16 @@ TOKEN :
 SimpleNode compilationUnit() :
 {}
 {
-	(packageDeclaration())? (importDeclarations())? (typeDeclarations())? <EOF>
+	(packageDeclaration())? (importDeclarations())? (typeDeclarations())? eof()
 	{
 	  return jjtThis;
 	}
+}
+
+void eof() :
+{}
+{
+  < EOF >
 }
 
 void packageDeclaration() :
@@ -266,6 +274,7 @@ void importDeclaration() :
   <IMPORT> packageName() < SEMIC >
 }
 
+
 void typeDeclarations() #void :
 {}
 {
@@ -285,9 +294,12 @@ void typeDeclaration() #void :
 }
 
 void classDeclaration() :
-{}
+{Token t;}
 {
-  (classOrInterfaceModifiers())? < CLASS > < ID > (extendsList())? (implementsList())? classBody()
+  (classOrInterfaceModifiers())? < CLASS > t= < ID > (extendsList())? (implementsList())? classBody()
+  {
+    jjtThis.value = t;
+  }
 }
 
 void classOrInterfaceModifiers() #void:
@@ -321,9 +333,12 @@ void implementsList():
 }
 
 void interfaceDeclaration() :
-{}
+{Token t;}
 {
-  (classOrInterfaceModifiers())? < INTERFACE > < ID > (extendsList())? interfaceBody()
+  (classOrInterfaceModifiers())? < INTERFACE > t= < ID > (extendsList())? interfaceBody()
+  {
+    jjtThis.value = t;
+  }
 }
 
 void interfaceBody() :
@@ -351,10 +366,13 @@ void interfaceMemberDeclaration() #void:
 }
 
 void interfaceMemberDeclaration1() #void:
-{}
+{Token t;}
 {
-  LOOKAHEAD(2) (variableDeclarator() < SEMIC >) #attributeDeclaration
-  | (methodDeclarator() (throwsConstruct())? < SEMIC >) #abstractMethodDeclaration
+  LOOKAHEAD(2) (variableDeclarator(false) < SEMIC >) #attributeDeclaration
+  | (t = methodDeclarator() (throwsConstruct())? < SEMIC >
+  {
+    jjtThis.value = t;
+  }) #abstractMethodDeclaration
 }
 
 void interfaceMemberModifiers() #void :
@@ -375,10 +393,13 @@ void interfaceMemberModifier() #void :
   < PUBLIC > | < STATIC > | < FINAL > | < ABSTRACT >
 }
 
-void methodDeclarator() #void :
-{}
+Token methodDeclarator() #void :
+{Token t;}
 {
-  < ID > < PARTA > (formalParameterList())? < PARTC >
+  t= < ID > < PARTA > formalParameterList() < PARTC >
+  {
+    return t;
+  }
 }
 
 void methodBody() :
@@ -444,35 +465,44 @@ void classBodyDeclarations1() #void :
 }
 
 void classBodyDeclaration() #void:
-{}
+{Token t = null;}
 {
-  (classMemberModifiers())? classBodyDeclaration1()
+  (t = classMemberModifiers())? classBodyDeclaration1(t)
 }
 
-void classBodyDeclaration1() #void:
+void classBodyDeclaration1(Token t) #void:
 {}
 {
-  LOOKAHEAD(2) classMemberDeclaration()
-  | constructorDeclaration()
+  LOOKAHEAD(2) classMemberDeclaration(t)
+  | constructorDeclaration(t)
 }
 
-void classMemberDeclaration() #void :
+void classMemberDeclaration(Token t) #void :
 {}
 {
-  type() classMemberDeclaration1()
+  type() classMemberDeclaration1(t)
 }
 
-void classMemberDeclaration1() #void:
-{}
+void classMemberDeclaration1(Token m) #void:
+{Token t = null;}
 {
-  LOOKAHEAD(2) (variableDeclarators() < SEMIC >) #fieldDeclaration
-  | (methodDeclarator() (throwsConstruct())? methodBody()) #methodDeclaration
+  LOOKAHEAD(2) (variableDeclarators(true) < SEMIC >) #fieldDeclaration
+  | (t = methodDeclarator() (throwsConstruct())? methodBody()
+  {
+    ValueNode vn = new ValueNode();
+    vn.id = t;
+    vn.modifier = m;
+    jjtThis.value = vn;
+  }) #methodDeclaration
 }
 
-void classMemberModifiers() #void :
-{}
+Token classMemberModifiers() #void :
+{Token t = null;}
 {
-  classMemberModifier() classMemberModifiers1()
+  (t=classMemberModifier() classMemberModifiers1())
+  {
+    return t;
+  }
 }
 
 void classMemberModifiers1() #void :
@@ -481,28 +511,35 @@ void classMemberModifiers1() #void :
   classMemberModifier() classMemberModifiers1() | {}
 }
 
-void classMemberModifier() #void :
-{}
+Token classMemberModifier() #void :
+{Token t = null;}
 {
-  < PUBLIC > | < PROTECTED > | < PRIVATE > | < STATIC > | < FINAL > | < TRANSIENT > | < VOLATILE >
+  (t = < PUBLIC > | t = < PROTECTED > | t =  < PRIVATE > | t = < STATIC > | t = < FINAL > | t =  < TRANSIENT > | t =  < VOLATILE >)
+  	{
+ 	  return t;
+ 	} 
 }
 
-void variableDeclarators() #void :
+void variableDeclarators(boolean isFieldDeclaration) #void :
 {}
 {
-  variableDeclarator() variableDeclarators1()
+  variableDeclarator(isFieldDeclaration) variableDeclarators1(isFieldDeclaration)
 }
 
-void variableDeclarators1() #void :
+void variableDeclarators1(boolean isFieldDeclaration) #void :
 {}
 {
-  < COMMA > variableDeclarator() variableDeclarators1() | {}
+  < COMMA > variableDeclarator(isFieldDeclaration) variableDeclarators1(isFieldDeclaration) | {}
 }
 
-void variableDeclarator() #void :
-{}
+void variableDeclarator(boolean isFieldDeclaration) #void :
+{Token t;}
 {
-  variableDeclaratorId() variableDeclarator1()
+  t=variableDeclaratorId() variableDeclarator1()
+  {
+    if (isFieldDeclaration)
+    	install(t, true);
+  }
 }
 
 void variableDeclarator1() #void :
@@ -524,22 +561,28 @@ void arrayInitializer() :
   < PARGA > variableInitializers() (< COMMA >)? < PARGC >
 }
 
-void variableInitializers() :
+void variableInitializers() #void :
 {}
 {
   variableInitializer() variableInitializers1()
 }
 
-void variableInitializers1() :
+void variableInitializers1() #void :
 {}
 {
   < COMMA > variableInitializer() variableInitializers1() | {}
 }
 
-void constructorDeclaration() :
-{}
+void constructorDeclaration(Token m) :
+{Token t = null;}
 {
-  constructorDeclarator() (throwsConstruct())? constructorBody()
+  (t = constructorDeclarator() (throwsConstruct())? constructorBody())
+  {
+    ValueNode vn = new ValueNode();
+    vn.modifier = m;
+    vn.id = t;
+    jjtThis.value = vn;
+  }
 }
 
 void constructorModifier() #void:
@@ -548,16 +591,19 @@ void constructorModifier() #void:
   < PUBLIC > | < PROTECTED > | < PRIVATE >
 }
 
-void constructorDeclarator() #void:
-{}
+Token constructorDeclarator() #void:
+{Token t;}
 {
-  < ID > < PARTA > (formalParameterList())? < PARTC >
+  t =< ID > < PARTA > formalParameterList() < PARTC >
+  {
+    return t;
+  }
 }
 
 void formalParameterList() :
 {}
 {
-  formalParameter() formalParameterList1()
+  formalParameter() formalParameterList1() | {}
 }
 
 void formalParameterList1() #void:
@@ -572,11 +618,14 @@ void formalParameter() :
   type() variableDeclaratorId()
 }
 
-void variableDeclaratorId() #void:
-{}
+Token variableDeclaratorId() #void:
+{Token t = null;}
 {
-  < ID > variableDeclaratorId1()
-  | objectDeclaratorId()
+  (t=< ID > variableDeclaratorId1()
+  | objectDeclaratorId()) //used for: ex. HashMap<String, Integer> var..
+  {
+    return t;
+  }
 }
 
 void objectDeclaratorId() #void:
@@ -663,8 +712,12 @@ void blockStatements1() #void:
 void blockStatement() #void:
 {}
 {
-	 LOOKAHEAD(3) localVariableDeclarationStatement()
-	 | statement()
+  	try {
+	 	(LOOKAHEAD(3) localVariableDeclarationStatement()
+	 	| statement())
+	} catch(ParseException e) {
+		error_skip(SEMIC);
+	}
 }
 
 void localVariableDeclarationStatement() :
@@ -676,19 +729,20 @@ void localVariableDeclarationStatement() :
 void localVariableDeclaration() #void:
 {}
 {
-	type() variableDeclarators()
+	type() variableDeclarators(false)
 }
 
-void argumentList() #void:
+void argumentList() :
 {}
 {
-	expression() argumentList1()
+	((expression()) #argument) argumentList1()
 }
 
 void argumentList1() #void :
 {}
 {
-  <COMMA> expression() argumentList1() | {}
+  (<COMMA> expression() argumentList1()) #argument
+  | {}
 }
 
 void expression() :
@@ -737,101 +791,6 @@ void assignmentOperator() #void:
   < MULASS > | < DIVASS > | < ADDASS > | < SUBASS > | <ASS>
 }
 
-void conditionalExpression() #void :
-{}
-{
-	conditionalOrExpression() 
-}
-
-void conditionalOrExpression() #void:
-{}
-{
-	conditionalAndExpression() conditionalOrExpression1()
-}
-
-void conditionalOrExpression1() #void:
-{}
-{
-  <OR> conditionalAndExpression() conditionalOrExpression1() | {}
-}
-
-void conditionalAndExpression() #void :
-{}
-{
-	inclusiveOrExpression() conditionalAndExpression1()
-}
-
-void conditionalAndExpression1() #void:
-{}
-{
-	<AND> inclusiveOrExpression() conditionalAndExpression1() | {}
-}
-
-void inclusiveOrExpression() #void:
-{}
-{
-	exclusiveOrExpression() inclusiveOrExpression1()
-}
-
-void inclusiveOrExpression1() #void:
-{}
-{
-	<OR> exclusiveOrExpression() inclusiveOrExpression1() | {}
-}
-
-
-void exclusiveOrExpression() #void:
-{}
-{
-	andExpression() exclusiveOrExpression1()
-}
-
-void exclusiveOrExpression1() #void:
-{}
-{
-	<EXP> andExpression() exclusiveOrExpression1() | {}
-}
-
-void andExpression() #void:
-{}
-{
-	equalityExpression() andExpression1()
-}
-
-void andExpression1() #void:
-{}
-{
-  <AND> equalityExpression() andExpression1() | {}
-}
-
-void equalityExpression() #void:
-{}
-{
-	relationalExpression() equalityExpression1()
-}
-
-void equalityExpression1() #void:
-{}
-{
-  (<MAJOR> | <MINOR> | <RELOP>) relationalExpression() equalityExpression1() | {}
-}
-
-void relationalExpression() #void:
-{}
-{
-	additiveExpression() relationalExpression1()
-}
-
-void relationalExpression1() #void:
-{}
-{
-	<MAJOR> additiveExpression() relationalExpression1()
-	| <MINOR> additiveExpression() relationalExpression1()
-	| <RELOP> additiveExpression() relationalExpression1()
-	| <INSTANCEOF> referenceType() relationalExpression1()
-	| {}
-}
-
 void referenceType() #void:
 {}
 {
@@ -842,52 +801,83 @@ void referenceType1() #void :
 {}
 {
   < PARQA > < PARQC > referenceType1()
-  | {} 
+  | {}
 }
 
-void additiveExpression() #void:
+void conditionalExpression() #void :
 {}
 {
-  multiplicativeExpression() additiveExpression1()
+	exprLogical()
 }
 
-void additiveExpression1() #void:
+void exprLogical() #void :
 {}
 {
-  <ARITOP_LP> multiplicativeExpression() additiveExpression1() | {}
+  andExpression()
 }
 
-void multiplicativeExpression() #void:
+void andExpression() #void :
 {}
 {
-  unaryExpression() multiplicativeExpression1()
+  	(orExpression() ( <AND> orExpression() )*) #and(>1)
 }
 
-void multiplicativeExpression1() #void:
+void orExpression() #void :
 {}
 {
-
- <ARITOP_HP> unaryExpression() multiplicativeExpression1() | {}
+  (logicalOperand() ( <OR> logicalOperand() )*) #or(>1)
 }
 
-void unaryExpression() #void:
+void logicalOperand() :
 {}
 {
-	identifierName() unaryExpression1()
+	expr() (LOOKAHEAD(2)(<RELOP> | <MAJOR> | <MINOR> | <INSTANCEOF>) expr())?
+}
+
+void expr() #void :
+{}
+{
+  lowPriorityExpression()
+}
+
+void lowPriorityExpression() #void :
+{}
+{
+  (highPriorityExpression() ( <ARITOP_LP> highPriorityExpression() )*) #aritop_lp(>1)
+}
+
+
+void highPriorityExpression() #void :
+{}
+{
+ 	(unaryExpression() ( <ARITOP_HP> unaryExpression() )*) #aritop_hp(>1)
+}
+
+void unaryExpression() :
+{ValueNode vn = null;}
+{
+	vn = identifierName() unaryExpression1(vn)
 	| classInstanceCreationExpression()
 	| literal()
 	| < ARITOP_LP > unaryExpression()
 	| < NOT > unaryExpression()
+	| LOOKAHEAD(2) <THIS> <DOT> unaryExpression()
 	| <THIS>
 	| < PARTA > unaryExpression1bis()
 }
 
-void unaryExpression1() #void:
+void unaryExpression1(ValueNode vn) #void:
 {}
 {
-  <PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?
+  ((<PARTA> (argumentList())? <PARTC> (< DOT > unaryExpression())?)
+  {
+    jjtThis.value = vn;
+  }) #methodInvocation
   | LOOKAHEAD(2) <ARITOP_LP> <ARITOP_LP> // POST INCREMENT
-  | <PARQA> expression() <PARQC> 
+  | ((<PARQA> expression() <PARQC>)
+  {
+    jjtThis.value = vn;
+  }) #methodInvocation
   | {}
 }
 
@@ -904,23 +894,35 @@ void preIncrDecrExpression() :
 	<ARITOP_LP> <ARITOP_LP> unaryExpression()
 }
 
-void identifierName() #void :
-{}
+ValueNode identifierName() :
+{boolean isDotId; Token t;}
 {
-	< ID > identifierName1()
+	t = < ID > isDotId = identifierName1(false)
+	{
+		ValueNode vn = new ValueNode();
+		SymbolTableEntry stE = st.get(t.image);
+		vn.id = t;
+		vn.isAttribute = isDotId;
+		if (stE != null) {
+			vn.isClassMember = stE.isClassMember();
+		}
+		jjtThis.value = vn;
+		return vn;
+	}
 }
 
-void identifierName1() #void :
+boolean identifierName1(boolean isDotId) :
 {}
 {
-	< DOT > (< ID > | <CLASS>) identifierName1()
-	| {}
+	< DOT > (< ID > | <CLASS>) identifierName1(true) { return true; }
+	| {return isDotId;}
+	
 }
 
 void classInstanceCreationExpression() :
 {}
 {
-	<NEW> classOrInterfaceType() classInstanceCreationExpression1()	
+	<NEW> (classOrInterfaceType() | primitiveType()) classInstanceCreationExpression1()	
 }
 
 void classInstanceCreationExpression1() #void:
@@ -1012,7 +1014,8 @@ void block() #void:
 void statementWithoutTrailingSubstatement() #void:
 {}
 {
-	block()
+  try {
+	(block()
 	| emptyStatement()
 	| expressionStatement()
 	| switchStatement()
@@ -1022,7 +1025,10 @@ void statementWithoutTrailingSubstatement() #void:
 	| returnStatement()
 	| synchronizedStatement()
 	| throwsStatement()
-	| tryStatement()
+	| tryStatement())
+	} catch(ParseException e) {
+		error_skip(SEMIC);
+	}
 }
 
 void emptyStatement():
@@ -1051,17 +1057,23 @@ void expressionStatement() #void :
 
 
 void statementExpression() #void:
-{}
+{ValueNode vn = null;}
 {
-	identifierName()
+	vn = identifierName()
 		((assignmentOperator() assignmentExpression()) #assignmentStatement
-		| (<PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
+		| ((<PARTA> (argumentList())? <PARTC> methodInvocation1())
+			{
+		  		jjtThis.value = vn;
+			}) #methodInvocation
 		| (<ARITOP_LP> <ARITOP_LP>) #postIncrDecrExpression
 		| (<PARQA> expression() <PARQC> assignmentOperator() assignmentExpression())
 		)
 
 	| LOOKAHEAD(4) (fieldAccess() assignmentOperator() assignmentExpression()) #assignmentStatement
-    | LOOKAHEAD(4) (<THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
+    | LOOKAHEAD(4) ((<THIS> <DOT> vn = identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1())
+      	{
+    		jjtThis.value = vn;
+  		}) #methodInvocation
     | (<SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()) #methodInvocation
 
 	| preIncrDecrExpression()
@@ -1070,11 +1082,14 @@ void statementExpression() #void:
 }
 
 void methodInvocation() :
-{}
+{ValueNode vn = null;}
 {
-	 LOOKAHEAD(2) identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | <THIS> <DOT> identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
-	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 (LOOKAHEAD(2) vn=identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <THIS> <DOT> vn = identifierName() <PARTA> (argumentList())? <PARTC> methodInvocation1()
+	 | <SUPER> <DOT> <ID> <PARTA> (argumentList())? <PARTC> methodInvocation1())
+	 	{
+    		jjtThis.value = vn;
+    	}
 }
 
 void methodInvocation1() #void:
@@ -1285,4 +1300,29 @@ void constantExpression() :
 {}
 {
 	expression()
+}
+
+JAVACODE 
+void error_skip(int kind) throws ParseException 
+{
+  ParseException e = generateParseException();
+  System.err.println(e.toString());
+  Token t;
+  do
+  {
+    t = getNextToken();
+    if (t.kind == 0) 
+    throw new ParseException("achieved EOF! No sync tokens found.");
+  }
+  while (t.kind != kind);
+}
+
+JAVACODE
+void install(Token t, boolean isClassMember) #void {
+	SymbolTableEntry stE = new SymbolTableEntry(null, t, isClassMember);
+	try {
+		st.install(stE);
+	} catch(Exception e) {
+		System.err.println(e.getMessage());
+	}
 }
