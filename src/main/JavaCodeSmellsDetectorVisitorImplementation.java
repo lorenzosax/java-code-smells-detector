@@ -94,8 +94,11 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 		
 		if(classStatementsCount >= LARGE_CLASS_THRESHOLD)
 			report.appendSmell("Large Class, " + className + ", " + "-" + ", " + "-");
-	
-		if(classCyclomaticComplex >= CYCLOMATIC_COMPLEX_THRESHOLD 
+
+		//double TCC=((double)tccCount/(double)numberOfMethods*100);
+		//System.out.println("Possible God Class (WMC="+classCyclomaticComplex+",ATFD="+ atfdCount.floatValue()+",TCC="+TCC+"%)");
+
+		if(classCyclomaticComplex >= CYCLOMATIC_COMPLEX_THRESHOLD
 				&& atfdCount >= ATFD_THRESHOLD
 				&& ((double)tccCount/(double)numberOfMethods*100) <= TCC_PERCENTAGE_THRESHOLD)
 			report.appendSmell("God Class, " + className + ", " + "-" + ", " + "-");
@@ -470,7 +473,6 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	@Override
 	public Object visit(ASTmethodInvocation node, Object data) {
 		methodStatementsCount++;
-		methodAccessAttributeOtherClass--; // to remove false positive due to identifierName
 		currentMethodBodyString += "ASTmethodInvocation";
 		
 		ValueNode vn = (ValueNode) node.jjtGetValue();
