@@ -3,7 +3,7 @@
  */
 options
 {
-  static = true;
+  static = false;
   multi = true;
   visitor = true;
 }
@@ -18,23 +18,40 @@ import main.*;
 
 public class JavaCodeSmellsDetector
 {
-  static SymbolTable st= new SymbolTable();
+  static SymbolTable st = new SymbolTable();
   
   public static void main(String args []) throws ParseException, IOException {
     try {
-      FileInputStream file = new FileInputStream(args[0]);
-      JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
-     
-      ASTcompilationUnit astCompilationUnit = (ASTcompilationUnit) detector.compilationUnit();
-      astCompilationUnit.dump("");
+      IReport report = new Report("MetricsReport.csv", "CodeSmellsReport.csv");
 
-      Report report = new Report("MetricsReport.csv", "CodeSmellsReport.csv");
-      JavaCodeSmellsDetectorVisitor v = new JavaCodeSmellsDetectorVisitorImplementation();
-      astCompilationUnit.jjtAccept(v, report);
+	  final File folder = new File("./code_to_analyze");
+
+	  run(folder, report);
+
+	  System.out.println("\nReports generated!");
 	} catch (Exception e) {
-      System.out.println("Oops.");
-      System.out.println(e.getMessage());
+      System.err.println("Oops.");
+      System.err.println(e.getMessage());
     }	
+  }
+
+  private static void run(File folder, IReport report) throws Exception {
+	for (File fileEntry : folder.listFiles()) {
+		if (fileEntry.isDirectory()) {
+			run(fileEntry, report);
+		} else {
+			System.out.print("Analyzing class '" + fileEntry.getPath() + ": ");
+			FileInputStream file = new FileInputStream(fileEntry.getPath());
+			JavaCodeSmellsDetector detector = new JavaCodeSmellsDetector(file);
+
+			ASTcompilationUnit astCompilationUnit = (ASTcompilationUnit) detector.compilationUnit();
+
+			JavaCodeSmellsDetectorVisitor v = new JavaCodeSmellsDetectorVisitorImplementation();
+			astCompilationUnit.jjtAccept(v, report);
+
+			System.out.println("ANALYZED!");
+		}
+	}
   }
 }
 
@@ -107,7 +124,6 @@ TOKEN : /* RESERVED WORDS*/
 | < INT: "int" >
 | < INTERFACE: "interface" >
 | < LONG: "long" >
-| < NATIVE: "native" >
 | < NEW: "new" >
 | < NULL: "null" >
 | < PACKAGE: "package">
@@ -130,16 +146,6 @@ TOKEN : /* RESERVED WORDS*/
 | < VOID: "void" >
 | < VOLATILE: "volatile" >
 | < WHILE: "while" >
-| < REQUIRES: "requires" >
-| < TO: "to" >
-| < WITH: "with" >
-| < OPEN: "open" >
-| < OPENS: "opens" >
-| < USES: "uses" >
-| < MODULE: "module" >
-| < EXPORTS: "exports" >
-| < PROVIDES: "provides" >
-| < TRANSITIVE: "transitive" >
 }
 
 TOKEN : /* NUMBERS */
@@ -514,7 +520,7 @@ void classMemberModifiers1() #void :
 Token classMemberModifier() #void :
 {Token t = null;}
 {
-  (t = < PUBLIC > | t = < PROTECTED > | t =  < PRIVATE > | t = < STATIC > | t = < FINAL > | t =  < TRANSIENT > | t =  < VOLATILE >)
+  (t = < PUBLIC > | t = < PROTECTED > | t =  < PRIVATE > | t = < STATIC > | t = < FINAL > | t =  < TRANSIENT > | t =  < VOLATILE > | t = <SYNCHRONIZED>)
   	{
  	  return t;
  	} 
@@ -1323,6 +1329,6 @@ void install(Token t, boolean isClassMember) #void {
 	try {
 		st.install(stE);
 	} catch(Exception e) {
-		System.err.println(e.getMessage());
+		// System.err.println(e.getMessage());
 	}
 }

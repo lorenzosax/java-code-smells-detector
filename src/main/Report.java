@@ -6,7 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 
-public class Report {
+public class Report implements IReport{
 	private String metricsFile;
 	private String smellsFile;
 	
@@ -17,6 +17,8 @@ public class Report {
 		Files.deleteIfExists(smellsFile.toPath());
 		this.metricsFile = metricsFileName;
 		this.smellsFile = smellsFileName;
+		this.appendMetric("Class, Type, Value");
+		this.appendSmell("CodeSmell, ClassName, MethodName, StartLine");
 	}
 
 	public void appendMetric(String string) {

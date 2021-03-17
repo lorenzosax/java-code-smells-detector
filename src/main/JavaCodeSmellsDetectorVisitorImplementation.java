@@ -20,7 +20,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 	private static final int TCC_PERCENTAGE_THRESHOLD = 30; // 30%
 	private static final int DUPLICATE_CODE_STMTS_THRESHOLD = 3;
 	private static Map<String, List<String>> methodStmtsMap = new HashMap<>();
-	private static Report report;
+	private static IReport report;
 	private static String className;
 	private static String currentMethodName;
 	private static String currentMethodBodyString;
@@ -45,9 +45,7 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 
 	@Override
 	public Object visit(ASTcompilationUnit node, Object data) {
-		report = (Report) data;
-		report.appendMetric("Type, Value");
-		report.appendSmell("CodeSmell, ClassName, MethodName, StartLine");
+		report = (IReport) data;
 		node.childrenAccept(this, data);
 		return null;
 	}
@@ -63,14 +61,14 @@ public class JavaCodeSmellsDetectorVisitorImplementation implements JavaCodeSmel
 				}
 			}
 		}
-		report.appendMetric("Number of Methods, " + numberOfMethods);
-		report.appendMetric("Number of Class's messages, " + numberOfClassMessages);
-		report.appendMetric("Number of Global variables, " + globalVariables);
+		report.appendMetric(className + ", Number of Methods, " + numberOfMethods);
+		report.appendMetric(className + ", Number of Class's messages, " + numberOfClassMessages);
+		report.appendMetric(className + ", Number of Global variables, " + globalVariables);
 		
 		if(publicMethods == 0)
-			report.appendMetric("Ratio PrivateMethods/PublicMethods, NaN");
+			report.appendMetric(className + ", Ratio PrivateMethods/PublicMethods, NaN");
 		else
-			report.appendMetric("Ratio PrivateMethods/PublicMethods, " + (double) privateMethods/publicMethods);
+			report.appendMetric(className + ", Ratio PrivateMethods/PublicMethods, " + (double) privateMethods/publicMethods);
 		
 		
 		return null;
